@@ -1,0 +1,151 @@
+package main
+
+import (
+	"encoding/json"
+	"flag"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"time"
+
+	"github.com/gorilla/mux"
+	"github.com/jasonlvhit/gocron"
+	"github.com/peterbourgon/ff"
+
+	"github.com/a-bouts/nav-server/wind"
+	"github.com/a-bouts/nav-server/xmpp"
+	//import "os"
+	// _ "net/http/pprof"
+)
+
+type GoNav struct {
+	Start       LatLon  `json:"start"`
+	Bearing     int     `json:"bearing"`
+	CurrentSail byte    `json:"currentSail"`
+	Race        Race    `json:"race"`
+	Delta       float64 `json:"delta"`
+	MaxDuration float64 `json:"maxDuration"`
+	Delay       int     `json:"delay"`
+	Sail        int     `json:"sail"`
+	Foil        bool    `json:"foil"`
+	Hull        bool    `json:"hull"`
+	Winch       bool    `json:"winch"`
+	Malus       float64 `json:"malus"`
+	Stop        bool    `json:"stop"`
+}
+
+func Refresh(w http.ResponseWriter, req *http.Request) {
+
+	go LoadWinds()
+}
+
+func Navigate(w http.ResponseWriter, req *http.Request) {
+	// if *cpuprofile != "" {
+	// 	runtime.SetCPUProfileRate(300)
+	// 	f, err := os.Create(*cpuprofile)
+	// 	if err != nil {
+	// 		log.Fatal("could not create CPU profile: ", err)
+	// 	}
+	// 	defer f.Close()
+	// 	if err := pprof.StartCPUProfile(f); err != nil {
+	// 		log.Fatal("could not start CPU profile: ", err)
+	// 	}
+	// 	defer pprof.StopCPUProfile()
+	// }
+
+	//params := mux.Vars(req)
+	var gonav GoNav
+	_ = json.NewDecoder(req.Body).Decode(&gonav)
+
+	fmt.Println(gonav)
+
+	winchMalus := 5.0
+	if gonav.Winch {
+		winchMalus = 1.25
+	}
+
+	start := time.Now()
+
+	isos := Run(&l, winds, &x, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, gonav.MaxDuration, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, gonav.Malus, gonav.Stop)
+
+	delta := time.Now().Sub(start)
+	fmt.Println(delta)
+
+	json.NewEncoder(w).Encode(isos)
+}
+
+func TestLand(w http.ResponseWriter, req *http.Request) {
+	isos := RunTestIsLand(&l)
+
+	json.NewEncoder(w).Encode(isos)
+}
+
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
+
+var l Land
+var winds map[string]*wind.Wind
+var x xmpp.Xmpp
+
+func LoadWinds() {
+	fmt.Println("Load winds")
+	winds = wind.LoadAll2()
+
+	/*    for d := 0 ; d < 6 ; d++ {
+	          Run(&l, winds, &x, LatLon{Lat: 40.430225, Lon: -73.9064}, 57, 1, load(), 3, 480, d, 7, true, true, 5.0, 1, false)
+	      }
+	      for d := 6 ; d < 36 ; d+=6 {
+	          Run(&l, winds, &x, LatLon{Lat: 40.430225, Lon: -73.9064}, 57, 1, load(), 3, 480, d, 7, true, true, 5.0, 1, false)
+	      }
+	      for d := 36 ; d < 192 ; d+=24 {
+	          Run(&l, winds, &x, LatLon{Lat: 40.430225, Lon: -73.9064}, 57, 1, load(), 3, 480, d, 7, true, true, 5.0, 1, false)
+	      }
+	*/
+}
+
+func main() {
+
+	fs := flag.NewFlagSet("nav-server", flag.ExitOnError)
+	var (
+		xmppHost     = fs.String("xmpp-host", "", "")
+		xmppJid      = fs.String("xmpp-jid", "", "")
+		xmppPassword = fs.String("xmpp-password", "", "")
+		xmppTo       = fs.String("xmpp-to", "", "")
+	)
+	ff.Parse(fs, os.Args[1:], ff.WithEnvVarNoPrefix())
+
+	flag.Parse()
+
+	x = xmpp.Xmpp{Config: xmpp.Config{Host: *xmppHost, Jid: *xmppJid, Password: *xmppPassword, To: *xmppTo}}
+
+	fmt.Println("Load lands")
+	l = InitLand()
+
+	LoadWinds()
+
+	s := gocron.NewScheduler()
+	jobxx := s.Every(1).Hour()
+	jobxx.Do(LoadWinds)
+	//    job04 := s.Every(1).Day().At("05:00")
+	//    job04.Do(LoadWinds)
+	//    job10 := s.Every(1).Day().At("11:00")
+	//    job10.Do(LoadWinds)
+	//    job16 := s.Every(1).Day().At("17:00")
+	//    job16.Do(LoadWinds)
+	//    job22 := s.Every(1).Day().At("23:00")
+	//    job22.Do(LoadWinds)
+	go s.Start()
+
+	_, time := s.NextRun()
+	fmt.Println(time)
+
+	fmt.Println("Start server")
+
+	router := mux.NewRouter().StrictSlash(true)
+	router.HandleFunc("/debug/nav/run", Navigate).Methods("POST")
+	router.HandleFunc("/debug/nav/refresh", Refresh).Methods("GET")
+	router.HandleFunc("/debug/nav/test", TestLand).Methods("POST")
+	log.Fatal(http.ListenAndServe(":8888", router))
+
+}

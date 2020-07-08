@@ -1,0 +1,4 @@
+grib-data/
+json-data/
+polars/
+.dockerignore
