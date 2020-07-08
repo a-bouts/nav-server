@@ -22,9 +22,7 @@ jobs:
       id: cache
       with:
         path: /tmp/.buildx-cache
-        key: ${{ runner.os }}-buildx-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-buildx-
+        key: ${{ runner.os }}-buildx-nav-server
 
     - name: Docker Buildx (build)
       run: |
