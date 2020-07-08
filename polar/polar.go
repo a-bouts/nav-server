@@ -57,6 +57,7 @@ func (z Polar) GetOptimBoatSpeed(twa float64, ws float64, boat Boat, s int, winc
 	}
 
 	if d1 > d2 {
+		fmt.Println("keep sail")
 		return bs1, s1
 	} else {
 		return bs2, s2
