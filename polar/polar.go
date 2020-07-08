@@ -43,15 +43,25 @@ func (z Polar) GetBoatSpeed(twa float64, ws float64, boat Boat) (float64, byte) 
 	return z.GetBoatSpeed2(twa, ws, boat, z.options.Sail)
 }
 
-func (z Polar) GetOptimBoatSpeed(twa float64, ws float64, boat Boat, s int, winchMalus float64) (float64, byte) {
-	bs1, s1 := z.GetBoatSpeed2(twa, ws, boat, s)
+func (z Polar) GetOptimBoatSpeed(twa float64, ws float64, boat Boat, s byte, winchMalus float64) (float64, byte) {
+	o := 0
+	if s == 2 || s == 3 {
+		o = 1
+	}
+	if s == 4 {
+		o = 2
+	}
+	if s == 5 || s == 6 {
+		o = 4
+	}
+	bs1, s1 := z.GetBoatSpeed2(twa, ws, boat, o)
 	bs2, s2 := z.GetBoatSpeed(twa, ws, boat)
 
 	d1 := bs1 * 1.852 * 1.0 * 1000.0
 	d2 := bs2 * 1.852 * 1.0 * 1000.0
-//	if int(s1) != s {
-//		d1 = bs1 * 1.852 * (1.0*60.0 - winchMalus/2) / 60 * 1000.0
-//	}
+	if int(s1) != s {
+		d1 = bs1 * 1.852 * (1.0*60.0 - winchMalus/2) / 60 * 1000.0
+	}
 	if int(s2) != s {
 		d2 = bs2 * 1.852 * (1.0*60.0 - winchMalus/2) / 60 * 1000.0
 	}

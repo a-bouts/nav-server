@@ -138,7 +138,7 @@ func jump(z *polar.Polar, boat polar.Boat, start *Position, waypoint *Waypoint, 
 	bearing := int(math.Round(b))
 	t := int(math.Round(twa))
 
-	boatSpeed, sail := z.GetOptimBoatSpeed(twa, ws*3.6, boat, int(src.sail), winchMalus)
+	boatSpeed, sail := z.GetOptimBoatSpeed(twa, ws*3.6, boat, src.sail, winchMalus)
 	//if boatSpeed <= 0.0 {
 	//    return 0, nil
 	//}
