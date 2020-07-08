@@ -495,19 +495,19 @@ func findWinds(winds map[string]*wind.Wind, m time.Time) (*wind.Wind, *wind.Wind
 	}
 	sort.Strings(keys)
 	if keys[0] >= stamp {
-		fmt.Printf("Found winds for '%s' : %s", stamp, keys[0])
+		fmt.Printf("Found winds for '%s' : %s\n", stamp, keys[0])
 		return winds[keys[0]], nil, 0
 	}
 	for i, _ := range keys {
 		if keys[i] > stamp {
 			h := m.Sub(winds[keys[i-1]].Date).Minutes()
 			delta := winds[keys[i]].Date.Sub(winds[keys[i-1]].Date).Minutes()
-			fmt.Printf("Found winds for '%s' : %s-%.2f-%s", stamp, keys[i-1], h/delta, keys[i])
+			fmt.Printf("Found winds for '%s' : %s-%.2f-%s\n", stamp, keys[i-1], h/delta, keys[i])
 			return winds[keys[i-1]], winds[keys[i]], h / delta
 			//return winds[keys[i-1]], nil, h / delta
 		}
 	}
-	fmt.Printf("Found winds for '%s' : %s", stamp, keys[len(keys)-1])
+	fmt.Printf("Found winds for '%s' : %s\n", stamp, keys[len(keys)-1])
 	return winds[keys[len(keys)-1]], nil, 0
 }
 
