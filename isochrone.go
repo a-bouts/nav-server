@@ -559,10 +559,10 @@ func Run(l *Land, winds map[string]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bear
 	nav[pos.az] = *pos
 
 	max := make(map[int]float64)
+	maxMax := 0.0
 	min := dist
 
 	factor := 0.0
-	maxMax := 0.0
 
 	result := Navs{
 		Navs: make([]Nav, 0, 1)}
@@ -592,20 +592,23 @@ func Run(l *Land, winds map[string]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bear
 		}
 
 		distBetweenPoints := math.Sin((math.Pi/180.0)/factor) * maxMax
+
+		previousFactor := factor
+
 		if maxMax-previousMaxMax < distBetweenPoints {
 			fmt.Println(" !!!!!! ")
 			fmt.Println(maxMax - previousMaxMax)
 			fmt.Println(distBetweenPoints)
 			fmt.Println(" !!!!!! ")
-		}
-
-		previousFactor := factor
-		factor = 1.0 + math.Round(math.Sin(math.Pi/180.0)*maxMax/15000)
-		if factor <= previousFactor {
-			factor = previousFactor
-		}
-		if factor > 0 && factor <= previousFactor && len(nav) < 25 {
-			factor += 1
+			factor++
+		} else {
+			factor = 1.0 + math.Round(math.Sin(math.Pi/180.0)*maxMax/15000)
+			if factor <= previousFactor {
+				factor = previousFactor
+			}
+			if factor > 0 && factor <= previousFactor && len(nav) < 25 {
+				factor++
+			}
 		}
 
 		if factor != previousFactor {
@@ -670,6 +673,7 @@ func Run(l *Land, winds map[string]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bear
 			fmt.Printf("Waypoint %s reached %dj %.1fh\n", waypoint.Name, int(duration/24.0), float64(int(duration)%24)+duration-math.Floor(duration))
 			nextWaypoint = race.Reached(nextWaypoint)
 			max = make(map[int]float64)
+			maxMax = 0.0
 			if race.HasNextWaypoint(nextWaypoint) {
 				pos = newPos(waypoint)
 				waypoint = race.NextWaypoint(nextWaypoint)
