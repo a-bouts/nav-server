@@ -34,6 +34,7 @@ type Sumup struct {
 	Start         time.Time        `json:"start"`
 	Duration      float64          `json:"duration"`
 	SailsDuration map[byte]float64 `json:"sailsDuration"`
+	Success       bool             `json:"success"`
 }
 
 type Position struct {
@@ -569,6 +570,8 @@ func Run(l *Land, winds map[string]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bear
 	result.Navs = append(result.Navs, Nav{waypoint.Name, make([]Isochrone, 0, int(maxDuration/delta))})
 	result.Navs[currentNav].Isochrones = append(result.Navs[currentNav].Isochrones, Isochrone{"ff0000", [][]Position{[]Position{*pos}}})
 
+	success := true
+
 	isochrones := make([]map[int]Position, 0, int(maxDuration/delta))
 	for ok := true; ok; ok = duration < maxDuration && race.HasNextWaypoint(nextWaypoint) && (!stop || !reached) {
 		d := delta
@@ -614,6 +617,7 @@ func Run(l *Land, winds map[string]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bear
 
 		if len(nav) == 0 {
 			fmt.Println("No way found")
+			success = false
 			break
 		}
 		isochrones = append(isochrones, nav)
@@ -730,7 +734,8 @@ func Run(l *Land, winds map[string]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bear
 	result.Sumup = Sumup{
 		Start:         startTime,
 		Duration:      duration,
-		SailsDuration: sails}
+		SailsDuration: sails,
+		Success:       success}
 
 	msg := fmt.Sprintf("%s : %dj %.1fh - %d L %d H %d C0\n", startTime.Format("02 Jan 15:04"), int(duration/24.0), float64(int(duration)%24)+duration-math.Floor(duration), int(sails[byte(3)]+sails[byte(6)]), int(sails[byte(2)]+sails[byte(5)]), int(sails[byte(4)]))
 	xm.Send(msg)
