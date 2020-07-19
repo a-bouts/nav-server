@@ -219,12 +219,12 @@ func doorReached(start *Position, src Position, waypoint *Waypoint, z *polar.Pol
 			if dist > distToWaypoint {
 				durationToWaypoint = (distToWaypoint / 1000.0) / ((boatSpeed / 2.0) * 1.852)
 			} else {
-				durationToWaypoint = 5.0/60.0 + ((distToWaypoint-dist)/1000.0)/(boatSpeed*1.852)
+				durationToWaypoint = winchMalus/60.0 + ((distToWaypoint-dist)/1000.0)/(boatSpeed*1.852)
 			}
 		}
 	}
 
-	if durationToWaypoint <= duration {
+	if durationToWaypoint <= 1.0*duration {
 		fullDist, az := start.Latlon.rhumbDistanceAndBearingTo(waypoint.Latlons[0])
 		res := Position{
 			Latlon:           waypoint.Latlons[0],
@@ -562,6 +562,7 @@ func Run(l *Land, winds map[string]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bear
 	min := dist
 
 	factor := 0.0
+	maxMax := 0.0
 
 	result := Navs{
 		Navs: make([]Nav, 0, 1)}
@@ -582,12 +583,22 @@ func Run(l *Land, winds map[string]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bear
 			d = 1.0
 		}
 
-		maxMax := 0.0
+		previousMaxMax := maxMax
+		maxMax = 0.0
 		for _, dist := range max {
 			if maxMax < dist {
 				maxMax = dist
 			}
 		}
+
+		distBetweenPoints := math.Sin((math.Pi/180.0)/factor) * maxMax
+		if maxMax-previousMaxMax < distBetweenPoints {
+			fmt.Println(" !!!!!! ")
+			fmt.Println(maxMax - previousMaxMax)
+			fmt.Println(distBetweenPoints)
+			fmt.Println(" !!!!!! ")
+		}
+
 		previousFactor := factor
 		factor = 1.0 + math.Round(math.Sin(math.Pi/180.0)*maxMax/15000)
 		if factor <= previousFactor {
