@@ -495,7 +495,7 @@ func findWinds(winds map[string]*wind.Wind, m time.Time) (*wind.Wind, *wind.Wind
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
-	if keys[0] >= stamp {
+	if keys[0] > stamp {
 		fmt.Printf("Found winds for '%s' : %s\n", stamp, keys[0])
 		return winds[keys[0]], nil, 0
 	}
