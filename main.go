@@ -20,6 +20,7 @@ import (
 )
 
 type GoNav struct {
+	Experiment  bool    `json:"experiment"`
 	Start       LatLon  `json:"start"`
 	Bearing     int     `json:"bearing"`
 	CurrentSail byte    `json:"currentSail"`
@@ -67,7 +68,7 @@ func Navigate(w http.ResponseWriter, req *http.Request) {
 
 	start := time.Now()
 
-	isos := Run(&l, winds, &x, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, gonav.MaxDuration, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, gonav.Malus, gonav.Stop)
+	isos := Run(gonav.Experiment, &l, winds, &x, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, gonav.MaxDuration, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, gonav.Malus, gonav.Stop)
 
 	delta := time.Now().Sub(start)
 	fmt.Println(delta)
