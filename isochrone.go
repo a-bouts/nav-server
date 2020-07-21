@@ -576,33 +576,6 @@ func Run(experiment bool, l *Land, winds map[string]*wind.Wind, xm *xmpp.Xmpp, s
 			}
 		}
 
-		// distBetweenPoints := math.Sin((math.Pi/180.0)/factor) * maxMax
-
-		// previousFactor := factor
-
-		// factor = 1.0 + math.Round(math.Sin(math.Pi/180.0)*maxMax/15000)
-		// if factor <= previousFactor {
-		// 	factor = previousFactor
-		// }
-		// if factor > 0 && factor <= previousFactor && len(nav) < 25 {
-		// 	factor++
-		// } else if experiment && maxMax-previousMaxMax > 0 && maxMax-previousMaxMax < distBetweenPoints {
-		// 	factor++
-		// }
-		//
-		// if factor != previousFactor {
-		// 	newMax := make(map[int]float64, 360*int(factor))
-		//
-		// 	for i := 0; i < 360*int(factor); i++ {
-		// 		k := int(float64(i) * previousFactor / factor)
-		// 		val, exists := max[k]
-		// 		if exists {
-		// 			newMax[i] = val
-		// 		}
-		// 	}
-		// 	max = newMax
-		// }
-
 		fmt.Printf("Nav %f - %d(%d) to %s (%.1f km)\n", duration, len(nav), int(factor), waypoint.Name, min/1000.0)
 		nav, reached, navDuration = navigate(context, w, w1, x, factor, max, &min, pos, nav, waypoint, &waypoint, d)
 
@@ -622,29 +595,37 @@ func Run(experiment bool, l *Land, winds map[string]*wind.Wind, xm *xmpp.Xmpp, s
 		}
 		sort.Ints(keys)
 
-		color := "#cc8dfc"
-		if int(math.Round(duration/delta))%int(24.0/delta) == 0 {
-			color = "#8dfccc"
-		} else if int(math.Round(duration/delta))%int(6/delta) == 0 {
-			color = "#fccc8d"
-		}
-		result.Navs[currentNav].Isochrones = append(result.Navs[currentNav].Isochrones, Isochrone{color, make([][]Position, 0, int(maxDuration/delta))})
-		currentIso = currentIso + 1
+		r1 := math.Abs(duration - math.Floor(duration/1.0)*1.0)
+		r6 := math.Abs(duration - math.Floor(duration/6.0)*6.0)
+		r24 := math.Abs(duration - math.Floor(duration/24.0)*24.0)
 
-		var navSlice []Position
-		previousK := -99
-		for _, k := range keys {
-			if k-previousK > 6 {
-				if previousK > 0 {
-					result.Navs[currentNav].Isochrones[currentIso].Paths = append(result.Navs[currentNav].Isochrones[currentIso].Paths, navSlice)
-				}
-				navSlice = make([]Position, 0, len(nav))
+		fmt.Printf("r %f %f %f %f\n", duration, r1, r6, r24)
+
+		if delta >= 1 || r1 < delta {
+			color := "#cc8dfc"
+			if r24 < delta {
+				color = "#8dfccc"
+			} else if r6 < delta {
+				color = "#fccc8d"
 			}
-			//		fmt.Println(int(duration), k, nav[k])
-			navSlice = append(navSlice, nav[k])
-			previousK = k
+			result.Navs[currentNav].Isochrones = append(result.Navs[currentNav].Isochrones, Isochrone{color, make([][]Position, 0, int(maxDuration/delta))})
+			currentIso = currentIso + 1
+
+			var navSlice []Position
+			previousK := -99
+			for _, k := range keys {
+				if k-previousK > 6 {
+					if previousK > 0 {
+						result.Navs[currentNav].Isochrones[currentIso].Paths = append(result.Navs[currentNav].Isochrones[currentIso].Paths, navSlice)
+					}
+					navSlice = make([]Position, 0, len(nav))
+				}
+				//		fmt.Println(int(duration), k, nav[k])
+				navSlice = append(navSlice, nav[k])
+				previousK = k
+			}
+			result.Navs[currentNav].Isochrones[currentIso].Paths = append(result.Navs[currentNav].Isochrones[currentIso].Paths, navSlice)
 		}
-		result.Navs[currentNav].Isochrones[currentIso].Paths = append(result.Navs[currentNav].Isochrones[currentIso].Paths, navSlice)
 
 		now = now.Add(time.Duration(int(navDuration*60.0)) * time.Minute)
 		w, w1, x = findWinds(winds, now)
