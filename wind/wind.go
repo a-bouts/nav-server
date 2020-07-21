@@ -45,7 +45,7 @@ func roundHours(hours int, interval int) string {
 func LoadAll2() map[string]*Wind {
 	winds := make(map[string]*Wind)
 	var files []string
-	err := filepath.Walk("grib-data", func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk("grib-data/", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			log.Println(err)
 		} else if info.Mode().IsRegular() {
