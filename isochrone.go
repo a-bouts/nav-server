@@ -14,6 +14,15 @@ import (
 	"github.com/a-bouts/nav-server/xmpp"
 )
 
+type Context struct {
+	experiment bool
+	polar      *polar.Polar
+	boat       polar.Boat
+	land       *Land
+	winchMalus float64
+	LatLonSpherical
+}
+
 type Isochrone struct {
 	Color string       `json:"color"`
 	Paths [][]Position `json:"paths"`
@@ -115,7 +124,7 @@ func isToAvoid(waypoint Waypoint, p LatLon) bool {
 	return false
 }
 
-func jump(experiment bool, z *polar.Polar, boat polar.Boat, start *Position, waypoint *Waypoint, src Position, b float64, wb float64, ws float64, d float64, factor float64, min *float64, winchMalus float64, malus float64) (int, *Position) {
+func jump(context Context, start *Position, waypoint *Waypoint, src Position, b float64, wb float64, ws float64, d float64, factor float64, min *float64) (int, *Position) {
 	bonus := 0
 	change := false
 
@@ -132,7 +141,7 @@ func jump(experiment bool, z *polar.Polar, boat polar.Boat, start *Position, way
 	if diff > 180 {
 		diff = 360 - diff
 	}
-	if experiment {
+	if context.experiment {
 		if math.Abs(twa) < 30 || math.Abs(twa) > 170 {
 			return 0, nil
 		}
@@ -141,34 +150,22 @@ func jump(experiment bool, z *polar.Polar, boat polar.Boat, start *Position, way
 	bearing := int(math.Round(b))
 	t := int(math.Round(twa))
 
-	boatSpeed, sail := z.GetOptimBoatSpeed(twa, ws*3.6, boat, src.sail, winchMalus)
+	boatSpeed, sail := context.polar.GetOptimBoatSpeed(twa, ws*3.6, context.boat, src.sail, context.winchMalus)
 	//if boatSpeed <= 0.0 {
 	//    return 0, nil
 	//}
 	dist := boatSpeed * 1.852 * d * 1000.0
 	if int(math.Round(twa))*src.twa < 0 || sail != src.sail {
 		// changement de voile = vitesse / 2 pendant 5 minutes : on enlève 2 minutes et demi
-		dist = boatSpeed * 1.852 * (d*60.0 - winchMalus/2) / 60 * 1000.0
+		dist = boatSpeed * 1.852 * (d*60.0 - context.winchMalus/2) / 60 * 1000.0
 		change = true
 
-	} else {
-
-		//apply malus to simplify navigation
-		if bearing == src.bearing {
-			bonus = 1
-		}
-		if t == src.twa {
-			bonus = 2
-		}
-		if bonus == 0 || bonus != src.bonus {
-			dist *= malus
-		}
 	}
 
-	to := src.Latlon.rhumbDestinationPoint(float64(b), dist)
+	to := context.Destination(src.Latlon, float64(b), dist)
 
-	fullDist, az := start.Latlon.rhumbDistanceAndBearingTo(to)
-	distTo := to.rhumbDistanceTo(waypoint.Latlons[0])
+	fullDist, az := context.DistanceAndBearingTo(start.Latlon, to)
+	distTo := context.DistanceTo(to, waypoint.Latlons[0])
 	res := Position{
 		Latlon:           to,
 		az:               int(math.Round(az * factor)),
@@ -192,8 +189,8 @@ func jump(experiment bool, z *polar.Polar, boat polar.Boat, start *Position, way
 	return res.az, &res
 }
 
-func doorReached(start *Position, src Position, waypoint *Waypoint, z *polar.Polar, boat polar.Boat, wb float64, ws float64, duration float64, winchMalus float64, factor float64) (bool, float64, *Position) {
-	distToWaypoint, az12 := src.Latlon.rhumbDistanceAndBearingTo(waypoint.Latlons[0])
+func doorReached(context Context, start *Position, src Position, waypoint *Waypoint, wb float64, ws float64, duration float64, factor float64) (bool, float64, *Position) {
+	distToWaypoint, az12 := context.DistanceAndBearingTo(src.Latlon, waypoint.Latlons[0])
 	twa := az12 - wb
 	if twa < -180 {
 		twa += 360
@@ -201,25 +198,25 @@ func doorReached(start *Position, src Position, waypoint *Waypoint, z *polar.Pol
 	if twa > 180 {
 		twa = 360 - twa
 	}
-	boatSpeed, sail := z.GetBoatSpeed(twa, ws*3.6, boat)
+	boatSpeed, sail := context.polar.GetBoatSpeed(twa, ws*3.6, context.boat)
 	durationToWaypoint := (distToWaypoint / 1000.0) / (boatSpeed * 1.852)
 
 	change := false
 	if int(math.Round(twa))*src.twa < 0 || sail != src.sail {
 		change = true
 		//dist := (boatSpeed / 2.0) * 1.852 * 5.0 / 60.0 * 1000.0
-		dist := (boatSpeed / 2.0) * 1.852 * winchMalus / 60.0 * 1000.0
+		dist := (boatSpeed / 2.0) * 1.852 * context.winchMalus / 60.0 * 1000.0
 		if change {
 			if dist > distToWaypoint {
 				durationToWaypoint = (distToWaypoint / 1000.0) / ((boatSpeed / 2.0) * 1.852)
 			} else {
-				durationToWaypoint = winchMalus/60.0 + ((distToWaypoint-dist)/1000.0)/(boatSpeed*1.852)
+				durationToWaypoint = context.winchMalus/60.0 + ((distToWaypoint-dist)/1000.0)/(boatSpeed*1.852)
 			}
 		}
 	}
 
 	if durationToWaypoint <= 1.5*duration {
-		fullDist, az := start.Latlon.rhumbDistanceAndBearingTo(waypoint.Latlons[0])
+		fullDist, az := context.DistanceAndBearingTo(start.Latlon, waypoint.Latlons[0])
 		res := Position{
 			Latlon:           waypoint.Latlons[0],
 			az:               int(math.Round(az * factor)),
@@ -242,11 +239,11 @@ func doorReached(start *Position, src Position, waypoint *Waypoint, z *polar.Pol
 	return false, 0, nil
 }
 
-func way(experiment bool, l *Land, z *polar.Polar, boat polar.Boat, start *Position, src Position, wb float64, ws float64, duration float64, waypoint *Waypoint, isochrone map[int]Position, factor float64, min *float64, winchMalus float64, malus float64) (map[int](*Position), bool, float64) {
+func way(context Context, start *Position, src Position, wb float64, ws float64, duration float64, waypoint *Waypoint, isochrone map[int]Position, factor float64, min *float64) (map[int](*Position), bool, float64) {
 	result := make(map[int](*Position))
 
 	if len(waypoint.Latlons) == 1 {
-		reached, dur, point := doorReached(start, src, waypoint, z, boat, wb, ws, duration, winchMalus, factor)
+		reached, dur, point := doorReached(context, start, src, waypoint, wb, ws, duration, factor)
 		if reached {
 			result[point.az] = point
 			return result, true, dur
@@ -255,7 +252,7 @@ func way(experiment bool, l *Land, z *polar.Polar, boat polar.Boat, start *Posit
 
 	bMin := 0
 	bMax := 360
-	if experiment {
+	if context.experiment {
 		if start.fromDist > 0.0 {
 			bMin = start.bearing - 90
 			if bMin < 0 {
@@ -270,7 +267,7 @@ func way(experiment bool, l *Land, z *polar.Polar, boat polar.Boat, start *Posit
 
 	if bMax > bMin {
 		for b := float64(bMin); b < float64(bMax); b += 1.0 {
-			az, to := jump(experiment, z, boat, start, waypoint, src, b, wb, ws, duration, factor, min, winchMalus, malus)
+			az, to := jump(context, start, waypoint, src, b, wb, ws, duration, factor, min)
 			if to != nil {
 				prev, exists := result[az]
 				if !exists || prev.fromDist < to.fromDist {
@@ -280,7 +277,7 @@ func way(experiment bool, l *Land, z *polar.Polar, boat polar.Boat, start *Posit
 		}
 	} else {
 		for b := float64(bMin); b < 360.0; b += 1.0 {
-			az, to := jump(experiment, z, boat, start, waypoint, src, b, wb, ws, duration, factor, min, winchMalus, malus)
+			az, to := jump(context, start, waypoint, src, b, wb, ws, duration, factor, min)
 			if to != nil {
 				prev, exists := result[az]
 				if !exists || prev.fromDist < to.fromDist {
@@ -289,7 +286,7 @@ func way(experiment bool, l *Land, z *polar.Polar, boat polar.Boat, start *Posit
 			}
 		}
 		for b := 0.0; b < float64(bMax); b += 1.0 {
-			az, to := jump(experiment, z, boat, start, waypoint, src, b, wb, ws, duration, factor, min, winchMalus, malus)
+			az, to := jump(context, start, waypoint, src, b, wb, ws, duration, factor, min)
 			if to != nil {
 				prev, exists := result[az]
 				if !exists || prev.fromDist < to.fromDist {
@@ -300,14 +297,14 @@ func way(experiment bool, l *Land, z *polar.Polar, boat polar.Boat, start *Posit
 	}
 
 	if len(waypoint.Latlons) == 3 {
-		t := waypoint.Latlons[0].rhumbBearingTo(waypoint.Latlons[1])
-		a := src.Latlon.rhumbBearingTo(waypoint.Latlons[0])
+		t := context.BearingTo(waypoint.Latlons[0], waypoint.Latlons[1])
+		a := context.BearingTo(src.Latlon, waypoint.Latlons[0])
 		alpha := 180 + a - t
 		if a > 180 {
 			alpha = alpha - 360
 		}
 
-		b := src.Latlon.rhumbBearingTo(waypoint.Latlons[1])
+		b := context.BearingTo(src.Latlon, waypoint.Latlons[1])
 		beta := b - t
 		if b > 180 {
 			beta = beta - 360
@@ -318,12 +315,12 @@ func way(experiment bool, l *Land, z *polar.Polar, boat polar.Boat, start *Posit
 		for az, res := range result {
 			//check if bearing allow to cross the door
 			if b < t && (a < b && float64(res.bearing) > a && float64(res.bearing) < b || a > b && (float64(res.bearing) > a || float64(res.bearing) < b)) {
-				a2 := res.Latlon.rhumbBearingTo(waypoint.Latlons[0])
+				a2 := context.BearingTo(res.Latlon, waypoint.Latlons[0])
 				alpha2 := 180 + a2 - t
 				if a2 > 180 {
 					alpha2 = alpha2 - 360
 				}
-				b2 := res.Latlon.rhumbBearingTo(waypoint.Latlons[1])
+				b2 := context.BearingTo(res.Latlon, waypoint.Latlons[1])
 				beta2 := b2 - t
 				if b2 > 180 {
 					beta2 = beta2 - 360
@@ -345,7 +342,7 @@ func way(experiment bool, l *Land, z *polar.Polar, boat polar.Boat, start *Posit
 	return result, false, duration
 }
 
-func navigate(experiment bool, l *Land, z *polar.Polar, boat polar.Boat, w *wind.Wind, w1 *wind.Wind, x float64, factor float64, max map[int]float64, min *float64, start *Position, previous_isochrone map[int]Position, originalWaypoint Waypoint, waypoint *Waypoint, duration float64, winchMalus float64, malus float64) (map[int]Position, bool, float64) {
+func navigate(context Context, w *wind.Wind, w1 *wind.Wind, x float64, factor float64, max map[int]float64, min *float64, start *Position, previous_isochrone map[int]Position, originalWaypoint Waypoint, waypoint *Waypoint, duration float64) (map[int]Position, bool, float64) {
 	isochrone := make(map[int]Position)
 	reached := false
 	var lock = sync.RWMutex{}
@@ -362,7 +359,7 @@ func navigate(experiment bool, l *Land, z *polar.Polar, boat polar.Boat, w *wind
 
 			wb, ws := w.Interpolate(w1, src.Latlon.Lat, src.Latlon.Lon, x)
 
-			way, reachedByWay, wayDuration := way(experiment, l, z, boat, start, src, wb, ws, duration, waypoint, isochrone, factor, min, winchMalus, malus)
+			way, reachedByWay, wayDuration := way(context, start, src, wb, ws, duration, waypoint, isochrone, factor, min)
 			if reachedByWay {
 				if len(waypoint.Latlons) == 1 {
 					for b, dst := range way {
@@ -427,7 +424,7 @@ func navigate(experiment bool, l *Land, z *polar.Polar, boat polar.Boat, w *wind
 			if isToAvoid(originalWaypoint, dst.Latlon) {
 				nbToAvoid++
 				toRemove = append(toRemove, az)
-			} else if l.IsLand(dst.Latlon.Lat, dst.Latlon.Lon) {
+			} else if context.land.IsLand(dst.Latlon.Lat, dst.Latlon.Lon) {
 				nbLand++
 				toRemove = append(toRemove, az)
 			} else if dst.fromDist+dst.distTo > 1.2*start.distTo {
@@ -462,8 +459,8 @@ func newPos(waypoint Waypoint) *Position {
 	}
 }
 
-func newPosition(start LatLon, waypoint Waypoint) float64 {
-	dist, _ := start.rhumbDistanceAndBearingTo(waypoint.Latlons[0])
+func newPosition(context Context, start LatLon, waypoint Waypoint) float64 {
+	dist, _ := context.DistanceAndBearingTo(start, waypoint.Latlons[0])
 	fmt.Printf("Go to waypoint %s (%.1f km)\n", waypoint.Name, dist/1000.0)
 
 	return dist
@@ -491,16 +488,23 @@ func findWinds(winds map[string]*wind.Wind, m time.Time) (*wind.Wind, *wind.Wind
 	return winds[keys[len(keys)-1]], nil, 0
 }
 
-func Run(experiment bool, l *Land, winds map[string]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bearing int, currentSail byte, race Race, delta float64, maxDuration float64, delay int, sail int, foil bool, hull bool, winchMalus float64, malus float64, stop bool) Navs {
+func Run(experiment bool, l *Land, winds map[string]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bearing int, currentSail byte, race Race, delta float64, maxDuration float64, delay int, sail int, foil bool, hull bool, winchMalus float64, stop bool) Navs {
+
 	z := polar.Init(polar.Options{Race: race.Polars, Sail: sail})
-	boat := polar.Boat{foil, hull}
+
+	context := Context{
+		experiment: experiment,
+		polar:      &z,
+		boat:       polar.Boat{Foil: foil, Hull: hull},
+		land:       l,
+		winchMalus: winchMalus}
 
 	nextWaypoint := 0
 	for v := race.IsValidated(nextWaypoint); v; v = race.IsValidated(nextWaypoint) {
 		nextWaypoint = race.Reached(nextWaypoint)
 	}
 	waypoint := race.NextWaypoint(nextWaypoint)
-	newPosition(start, waypoint)
+	newPosition(context, start, waypoint)
 
 	duration := 0.0
 	now := time.Now().UTC()
@@ -516,9 +520,9 @@ func Run(experiment bool, l *Land, winds map[string]*wind.Wind, xm *xmpp.Xmpp, s
 	reached := false
 	navDuration := 0.0
 
-	dist := start.rhumbDistanceTo(race.NextWaypoint(nextWaypoint).Latlons[0])
+	dist := context.DistanceTo(start, race.NextWaypoint(nextWaypoint).Latlons[0])
 
-	boatSpeed, _ := z.GetBoatSpeed(90, 10.0, boat)
+	boatSpeed, _ := context.polar.GetBoatSpeed(90, 10.0, context.boat)
 	distBetweenPoints := boatSpeed * 1.852 * delta * 1000.0
 	factor := 1.0 + math.Round((math.Pi/180.0)/math.Asin(distBetweenPoints/dist))
 
@@ -600,7 +604,7 @@ func Run(experiment bool, l *Land, winds map[string]*wind.Wind, xm *xmpp.Xmpp, s
 		// }
 
 		fmt.Printf("Nav %f - %d(%d) to %s (%.1f km)\n", duration, len(nav), int(factor), waypoint.Name, min/1000.0)
-		nav, reached, navDuration = navigate(experiment, l, &z, boat, w, w1, x, factor, max, &min, pos, nav, waypoint, &waypoint, d, winchMalus, malus)
+		nav, reached, navDuration = navigate(context, w, w1, x, factor, max, &min, pos, nav, waypoint, &waypoint, d)
 
 		duration += navDuration
 
@@ -650,16 +654,15 @@ func Run(experiment bool, l *Land, winds map[string]*wind.Wind, xm *xmpp.Xmpp, s
 			if race.HasNextWaypoint(nextWaypoint) {
 				pos = newPos(waypoint)
 				waypoint = race.NextWaypoint(nextWaypoint)
-				dist := pos.Latlon.rhumbDistanceTo(waypoint.Latlons[0])
+				dist := context.DistanceTo(pos.Latlon, waypoint.Latlons[0])
 				pos.distTo = dist
-				min = newPosition(pos.Latlon, waypoint)
+				min = newPosition(context, pos.Latlon, waypoint)
 
-				boatSpeed, _ := z.GetBoatSpeed(90, 10.0, boat)
+				boatSpeed, _ := context.polar.GetBoatSpeed(90, 10.0, context.boat)
 				distBetweenPoints := boatSpeed * 1.852 * delta * 1000.0
 				factor = 1.0 + math.Round((math.Pi/180.0)/math.Asin(distBetweenPoints/dist))
 
 				max = make(map[int]float64, 360*int(factor))
-				maxMax = 0.0
 				// previousFactor = 1
 				result.Navs = append(result.Navs, Nav{waypoint.Name, make([]Isochrone, 0, int(maxDuration/delta))})
 				currentNav++

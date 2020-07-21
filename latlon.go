@@ -5,9 +5,17 @@ import "math"
 const π = math.Pi
 const R = 6371e3
 
+type LatLonInterface interface {
+	DistanceTo(from, to LatLon) float64
+	BearingTo(from, to LatLon) float64
+	DistanceAndBearingTo(from, to LatLon) (float64, float64)
+	Destination(from LatLon, bearing float64, distance float64) LatLon
+}
+
 type LatLon struct {
 	Lat float64 `json:"lat"`
 	Lon float64 `json:"lon"`
+	LatLonSpherical
 }
 
 func toRadians(a float64) float64 {
@@ -28,7 +36,9 @@ func wrap360(d float64) float64 {
 	return d2
 }
 
-func (from LatLon) initialBearingTo(to LatLon) float64 {
+type LatLonSpherical struct{}
+
+func (LatLonSpherical) initialBearingTo(from, to LatLon) float64 {
 	φ1 := toRadians(from.Lat)
 	φ2 := toRadians(to.Lat)
 	Δλ := toRadians(to.Lon - from.Lon)
@@ -42,7 +52,7 @@ func (from LatLon) initialBearingTo(to LatLon) float64 {
 	return wrap360(b)
 }
 
-func (from LatLon) rhumbDistanceTo(to LatLon) float64 {
+func (LatLonSpherical) DistanceTo(from, to LatLon) float64 {
 	φ1 := toRadians(from.Lat)
 	φ2 := toRadians(to.Lat)
 	Δφ := φ2 - φ1
@@ -69,7 +79,7 @@ func (from LatLon) rhumbDistanceTo(to LatLon) float64 {
 	return d
 }
 
-func (from LatLon) rhumbBearingTo(to LatLon) float64 {
+func (LatLonSpherical) BearingTo(from, to LatLon) float64 {
 	φ1 := toRadians(from.Lat)
 	φ2 := toRadians(to.Lat)
 
@@ -91,7 +101,7 @@ func (from LatLon) rhumbBearingTo(to LatLon) float64 {
 	return wrap360(b)
 }
 
-func (from LatLon) rhumbDistanceAndBearingTo(to LatLon) (float64, float64) {
+func (LatLonSpherical) DistanceAndBearingTo(from, to LatLon) (float64, float64) {
 	φ1 := toRadians(from.Lat)
 	φ2 := toRadians(to.Lat)
 	Δφ := φ2 - φ1
@@ -124,7 +134,7 @@ func (from LatLon) rhumbDistanceAndBearingTo(to LatLon) (float64, float64) {
 	return d, wrap360(b)
 }
 
-func (from LatLon) rhumbDestinationPoint(bearing float64, distance float64) LatLon {
+func (LatLonSpherical) Destination(from LatLon, bearing float64, distance float64) LatLon {
 	φ1 := toRadians(from.Lat)
 	λ1 := toRadians(from.Lon)
 	θ := toRadians(bearing)
@@ -155,8 +165,4 @@ func (from LatLon) rhumbDestinationPoint(bearing float64, distance float64) LatL
 	lon := toDegrees(λ2)
 
 	return LatLon{Lat: lat, Lon: lon}
-}
-
-func (from LatLon) isLand() bool {
-	return false
 }

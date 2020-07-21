@@ -68,7 +68,7 @@ func Navigate(w http.ResponseWriter, req *http.Request) {
 
 	start := time.Now()
 
-	isos := Run(gonav.Experiment, &l, winds, &x, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, gonav.MaxDuration, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, gonav.Malus, gonav.Stop)
+	isos := Run(gonav.Experiment, &l, winds, &x, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, gonav.MaxDuration, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, gonav.Stop)
 
 	delta := time.Now().Sub(start)
 	fmt.Println(delta)

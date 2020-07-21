@@ -21,7 +21,7 @@ type Race struct {
 }
 
 type Races struct {
-	races map[string]Race `json:"races"`
+	races map[string]Race
 }
 
 func test() {
