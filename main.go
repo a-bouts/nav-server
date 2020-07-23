@@ -76,6 +76,25 @@ func Navigate(w http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(w).Encode(isos)
 }
 
+func BoatLines(w http.ResponseWriter, req *http.Request) {
+	var gonav GoNav
+	_ = json.NewDecoder(req.Body).Decode(&gonav)
+
+	winchMalus := 5.0
+	if gonav.Winch {
+		winchMalus = 1.25
+	}
+
+	start := time.Now()
+
+	lines := GetBoatLines(gonav.Experiment, winds, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus)
+
+	delta := time.Now().Sub(start)
+	fmt.Println(delta)
+
+	json.NewEncoder(w).Encode(lines)
+}
+
 func TestLand(w http.ResponseWriter, req *http.Request) {
 	isos := RunTestIsLand(&l)
 
@@ -147,6 +166,7 @@ func main() {
 	router.HandleFunc("/debug/nav/run", Navigate).Methods("POST")
 	router.HandleFunc("/debug/nav/refresh", Refresh).Methods("GET")
 	router.HandleFunc("/debug/nav/test", TestLand).Methods("POST")
+	router.HandleFunc("/debug/nav/boatlines", BoatLines).Methods("POST")
 	log.Fatal(http.ListenAndServe(":8888", router))
 
 }

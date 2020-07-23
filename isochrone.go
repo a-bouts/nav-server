@@ -165,7 +165,6 @@ func jump(context Context, start *Position, waypoint *Waypoint, src Position, b 
 	to := context.Destination(src.Latlon, float64(b), dist)
 
 	fullDist, az := context.DistanceAndBearingTo(start.Latlon, to)
-	distTo := context.DistanceTo(to, waypoint.Latlons[0])
 	res := Position{
 		Latlon:           to,
 		az:               int(math.Round(az * factor)),
@@ -177,14 +176,16 @@ func jump(context Context, start *Position, waypoint *Waypoint, src Position, b 
 		boatSpeed:        boatSpeed,
 		sail:             sail,
 		bonus:            bonus,
-		distTo:           distTo,
 		duration:         d + src.duration,
 		navDuration:      d,
 		previousWindLine: &src,
 		change:           change}
 
-	if res.distTo < *min {
-		*min = res.distTo
+	if waypoint != nil {
+		res.distTo = context.DistanceTo(to, waypoint.Latlons[0])
+		if res.distTo < *min {
+			*min = res.distTo
+		}
 	}
 	return res.az, &res
 }
@@ -471,14 +472,14 @@ func findWinds(winds map[string]*wind.Wind, m time.Time) (*wind.Wind, *wind.Wind
 	stamp := m.Format("2006010215")
 
 	keys := make([]string, 0, len(winds))
-	for k, _ := range winds {
+	for k := range winds {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 	if keys[0] > stamp {
 		return winds[keys[0]], nil, 0
 	}
-	for i, _ := range keys {
+	for i := range keys {
 		if keys[i] > stamp {
 			h := m.Sub(winds[keys[i-1]].Date).Minutes()
 			delta := winds[keys[i]].Date.Sub(winds[keys[i-1]].Date).Minutes()
@@ -537,7 +538,7 @@ func Run(experiment bool, l *Land, winds map[string]*wind.Wind, xm *xmpp.Xmpp, s
 		navDuration: 0.0} //float64(delay)}
 
 	wb, _ := w.Interpolate(w1, pos.Latlon.Lat, pos.Latlon.Lon, x)
-	pos.twa = int(float64(bearing) - wb)
+	pos.twa = int(math.Round(float64(bearing) - wb))
 	if pos.twa < -180 {
 		pos.twa += 360
 	}
