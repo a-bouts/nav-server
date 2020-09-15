@@ -42,8 +42,8 @@ func roundHours(hours int, interval int) string {
 	return ""
 }
 
-func LoadAll2() map[string]*Wind {
-	winds := make(map[string]*Wind)
+func LoadAll2() map[string][]*Wind {
+	winds := make(map[string][]*Wind)
 	var files []string
 	err := filepath.Walk("grib-data/", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -60,7 +60,7 @@ func LoadAll2() map[string]*Wind {
 
 	sort.Strings(files)
 
-	forecasts := make(map[int]string)
+	forecasts := make(map[int][]string)
 
 	for cpt, f := range files {
 
@@ -91,7 +91,7 @@ func LoadAll2() map[string]*Wind {
 
 		//quand c'est la prévision courante, on la conserve meme si une nouvelle prévision est arrivé
 		if !found || forecastHour >= 0 {
-			forecasts[forecastHour] = f
+			forecasts[forecastHour] = append(forecasts[forecastHour], f)
 		}
 	}
 
@@ -101,15 +101,17 @@ func LoadAll2() map[string]*Wind {
 	}
 	sort.Ints(keys)
 	for _, k := range keys {
-		fmt.Println(k, forecasts[k])
-		d := strings.Split(forecasts[k], ".")[0]
-		date, _ := time.Parse("2006010215", d)
-		f, _ := strconv.Atoi(strings.Split(forecasts[k], ".")[1][1:])
-		date = date.Add(time.Hour * time.Duration(f))
-		sdate := date.Format("2006010215")
-		wind := Init(date, forecasts[k])
-		fmt.Println("Init", sdate, wind.File)
-		winds[sdate] = &wind
+		for _, file := range forecasts[k] {
+			fmt.Println(k, file)
+			d := strings.Split(file, ".")[0]
+			date, _ := time.Parse("2006010215", d)
+			f, _ := strconv.Atoi(strings.Split(file, ".")[1][1:])
+			date = date.Add(time.Hour * time.Duration(f))
+			sdate := date.Format("2006010215")
+			wind := Init(date, file)
+			fmt.Println("Init", sdate, wind.File)
+			winds[sdate] = append(winds[sdate], &wind)
+		}
 	}
 	return winds
 }
@@ -211,7 +213,7 @@ func floorMod(a float64, n float64) float64 {
 	return a - n*math.Floor(a/n)
 }
 
-func bilinearInterpolate(x float64, y float64, g00 []float64, g10 []float64, g01 []float64, g11 []float64) (float64, float64, float64) {
+func bilinearInterpolate(x float64, y float64, g00 []float64, g10 []float64, g01 []float64, g11 []float64) (float64, float64) {
 
 	rx := (1 - x)
 	ry := (1 - y)
@@ -224,7 +226,7 @@ func bilinearInterpolate(x float64, y float64, g00 []float64, g10 []float64, g01
 	u := g00[0]*a + g10[0]*b + g01[0]*c + g11[0]*d
 	v := g00[1]*a + g10[1]*b + g01[1]*c + g11[1]*d
 
-	return u, v, math.Sqrt(u*u + v*v)
+	return u, v
 }
 
 func vectorToDegrees(u float64, v float64, d float64) float64 {
@@ -234,7 +236,7 @@ func vectorToDegrees(u float64, v float64, d float64) float64 {
 	return velocityDirToDegrees
 }
 
-func (w Wind) interpolate(lat float64, lon float64) (float64, float64, float64) {
+func (w Wind) interpolate(lat float64, lon float64) (float64, float64) {
 
 	i := math.Abs((lat - w.Lat0) / w.ΔLat)
 	j := floorMod(lon-w.Lon0, 360.0) / w.ΔLon
@@ -254,21 +256,36 @@ func (w Wind) interpolate(lat float64, lon float64) (float64, float64, float64) 
 	u11 := w.U[fi+1][fj+1]
 	v11 := w.V[fi+1][fj+1]
 
-	u, v, d := bilinearInterpolate(j-float64(fj), i-float64(fi), []float64{u00, v00}, []float64{u10, v10}, []float64{u01, v01}, []float64{u11, v11})
+	u, v := bilinearInterpolate(j-float64(fj), i-float64(fi), []float64{u00, v00}, []float64{u10, v10}, []float64{u01, v01}, []float64{u11, v11})
 
-	return u, v, d
+	return u, v
 }
 
-func (w Wind) Interpolate(w1 *Wind, lat float64, lon float64, h float64) (float64, float64) {
+func midInterpolate(ws []*Wind, lat float64, lon float64) (float64, float64) {
 
-	u, v, d := w.interpolate(lat, lon)
-
-	if w1 != nil {
-		u1, v1, _ := w1.interpolate(lat, lon)
-		u = u1*h + u*(1-h)
-		v = v1*h + v*(1-h)
-		d = math.Sqrt(u*u + v*v)
+	u, v := 0., 0.
+	for _, w := range ws {
+		u1, v1 := w.interpolate(lat, lon)
+		u += u1
+		v += v1
 	}
+	u /= float64(len(ws))
+	v /= float64(len(ws))
+
+	return u, v
+}
+
+func Interpolate(w1 []*Wind, w2 []*Wind, lat float64, lon float64, h float64) (float64, float64) {
+
+	u, v := midInterpolate(w1, lat, lon)
+
+	if w2 != nil {
+		u2, v2 := midInterpolate(w2, lat, lon)
+		u = u2*h + u*(1-h)
+		v = v2*h + v*(1-h)
+	}
+	d := math.Sqrt(u*u + v*v)
 
 	return vectorToDegrees(u, v, d), d
+
 }

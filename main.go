@@ -105,7 +105,7 @@ var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
 var l Land
-var winds map[string]*wind.Wind
+var winds map[string][]*wind.Wind
 var x xmpp.Xmpp
 
 func LoadWinds() {

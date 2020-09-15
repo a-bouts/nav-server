@@ -343,7 +343,7 @@ func way(context Context, start *Position, src Position, wb float64, ws float64,
 	return result, false, duration
 }
 
-func navigate(context Context, w *wind.Wind, w1 *wind.Wind, x float64, factor float64, max map[int]float64, min *float64, start *Position, previous_isochrone map[int]Position, originalWaypoint Waypoint, waypoint *Waypoint, duration float64) (map[int]Position, bool, float64) {
+func navigate(context Context, w []*wind.Wind, w1 []*wind.Wind, x float64, factor float64, max map[int]float64, min *float64, start *Position, previous_isochrone map[int]Position, originalWaypoint Waypoint, waypoint *Waypoint, duration float64) (map[int]Position, bool, float64) {
 	isochrone := make(map[int]Position)
 	reached := false
 	var lock = sync.RWMutex{}
@@ -358,7 +358,7 @@ func navigate(context Context, w *wind.Wind, w1 *wind.Wind, x float64, factor fl
 
 		go func(src Position) {
 
-			wb, ws := w.Interpolate(w1, src.Latlon.Lat, src.Latlon.Lon, x)
+			wb, ws := wind.Interpolate(w, w1, src.Latlon.Lat, src.Latlon.Lon, x)
 
 			way, reachedByWay, wayDuration := way(context, start, src, wb, ws, duration, waypoint, isochrone, factor, min)
 			if reachedByWay {
@@ -467,7 +467,7 @@ func newPosition(context Context, start LatLon, waypoint Waypoint) float64 {
 	return dist
 }
 
-func findWinds(winds map[string]*wind.Wind, m time.Time) (*wind.Wind, *wind.Wind, float64) {
+func findWinds(winds map[string][]*wind.Wind, m time.Time) ([]*wind.Wind, []*wind.Wind, float64) {
 
 	stamp := m.Format("2006010215")
 
@@ -481,15 +481,15 @@ func findWinds(winds map[string]*wind.Wind, m time.Time) (*wind.Wind, *wind.Wind
 	}
 	for i := range keys {
 		if keys[i] > stamp {
-			h := m.Sub(winds[keys[i-1]].Date).Minutes()
-			delta := winds[keys[i]].Date.Sub(winds[keys[i-1]].Date).Minutes()
+			h := m.Sub(winds[keys[i-1]][0].Date).Minutes()
+			delta := winds[keys[i]][0].Date.Sub(winds[keys[i-1]][0].Date).Minutes()
 			return winds[keys[i-1]], winds[keys[i]], h / delta
 		}
 	}
 	return winds[keys[len(keys)-1]], nil, 0
 }
 
-func Run(experiment bool, l *Land, winds map[string]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bearing int, currentSail byte, race Race, delta float64, maxDuration float64, delay int, sail int, foil bool, hull bool, winchMalus float64, stop bool) Navs {
+func Run(experiment bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bearing int, currentSail byte, race Race, delta float64, maxDuration float64, delay int, sail int, foil bool, hull bool, winchMalus float64, stop bool) Navs {
 
 	z := polar.Init(polar.Options{Race: race.Polars, Sail: sail})
 
@@ -537,7 +537,7 @@ func Run(experiment bool, l *Land, winds map[string]*wind.Wind, xm *xmpp.Xmpp, s
 		duration:    0.0,
 		navDuration: 0.0} //float64(delay)}
 
-	wb, _ := w.Interpolate(w1, pos.Latlon.Lat, pos.Latlon.Lon, x)
+	wb, _ := wind.Interpolate(w, w1, pos.Latlon.Lat, pos.Latlon.Lon, x)
 	pos.twa = int(math.Round(float64(bearing) - wb))
 	if pos.twa < -180 {
 		pos.twa += 360

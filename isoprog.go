@@ -14,7 +14,7 @@ type BoatLine struct {
 	Line []LatLon `json:"line"`
 }
 
-func GetBoatLines(experiment bool, winds map[string]*wind.Wind, start LatLon, bearing int, currentSail byte, race Race, delta float64, delay int, sail int, foil bool, hull bool, winchMalus float64) []map[int](*BoatLine) {
+func GetBoatLines(experiment bool, winds map[string][]*wind.Wind, start LatLon, bearing int, currentSail byte, race Race, delta float64, delay int, sail int, foil bool, hull bool, winchMalus float64) []map[int](*BoatLine) {
 
 	z := polar.Init(polar.Options{Race: race.Polars, Sail: sail})
 
@@ -27,7 +27,7 @@ func GetBoatLines(experiment bool, winds map[string]*wind.Wind, start LatLon, be
 	return []map[int](*BoatLine){BearingLine(context, winds, start, bearing, currentSail, delta, delay, sail), TwaLine(context, winds, start, bearing, currentSail, delta, delay, sail)}
 }
 
-func BearingLine(context Context, winds map[string]*wind.Wind, start LatLon, bearing int, currentSail byte, delta float64, delay int, sail int) map[int](*BoatLine) {
+func BearingLine(context Context, winds map[string][]*wind.Wind, start LatLon, bearing int, currentSail byte, delta float64, delay int, sail int) map[int](*BoatLine) {
 
 	result := make(map[int](*BoatLine))
 	var hops [360]*Position
@@ -36,12 +36,12 @@ func BearingLine(context Context, winds map[string]*wind.Wind, start LatLon, bea
 
 	w, w1, x := findWinds(winds, now)
 
-	fmt.Println(w.File)
+	fmt.Println(w[0].File)
 	if w1 != nil {
-		fmt.Println(w1.File)
+		fmt.Println(w1[0].File)
 	}
 
-	wb, _ := w.Interpolate(w1, start.Lat, start.Lon, x)
+	wb, _ := wind.Interpolate(w, w1, start.Lat, start.Lon, x)
 
 	duration := 0.0
 
@@ -65,7 +65,7 @@ func BearingLine(context Context, winds map[string]*wind.Wind, start LatLon, bea
 		for b := 0; b < 360; b++ {
 			src := result[b].Line[len(result[b].Line)-1]
 
-			wb, ws := w.Interpolate(w1, src.Lat, src.Lon, x)
+			wb, ws := wind.Interpolate(w, w1, src.Lat, src.Lon, x)
 
 			_, pos := jump(context, &Position{Latlon: start}, nil, *hops[b], float64(b), wb, ws, delta, 1, nil)
 
@@ -76,16 +76,16 @@ func BearingLine(context Context, winds map[string]*wind.Wind, start LatLon, bea
 		duration += delta
 		now = now.Add(time.Duration(int(delta*60.0)) * time.Minute)
 		w, w1, x = findWinds(winds, now)
-		fmt.Println(w.File)
+		fmt.Println(w[0].File)
 		if w1 != nil {
-			fmt.Println(w1.File)
+			fmt.Println(w1[0].File)
 		}
 	}
 
 	return result
 }
 
-func TwaLine(context Context, winds map[string]*wind.Wind, start LatLon, bearing int, currentSail byte, delta float64, delay int, sail int) map[int](*BoatLine) {
+func TwaLine(context Context, winds map[string][]*wind.Wind, start LatLon, bearing int, currentSail byte, delta float64, delay int, sail int) map[int](*BoatLine) {
 
 	result := make(map[int](*BoatLine))
 	var hops [360]*Position
@@ -94,12 +94,12 @@ func TwaLine(context Context, winds map[string]*wind.Wind, start LatLon, bearing
 
 	w, w1, x := findWinds(winds, now)
 
-	fmt.Println(w.File)
+	fmt.Println(w[0].File)
 	if w1 != nil {
-		fmt.Println(w1.File)
+		fmt.Println(w1[0].File)
 	}
 
-	wb, _ := w.Interpolate(w1, start.Lat, start.Lon, x)
+	wb, _ := wind.Interpolate(w, w1, start.Lat, start.Lon, x)
 
 	duration := 0.0
 
@@ -123,7 +123,7 @@ func TwaLine(context Context, winds map[string]*wind.Wind, start LatLon, bearing
 		for b := 0; b < 360; b++ {
 			src := result[b].Line[len(result[b].Line)-1]
 
-			wb, ws := w.Interpolate(w1, src.Lat, src.Lon, x)
+			wb, ws := wind.Interpolate(w, w1, src.Lat, src.Lon, x)
 
 			var bearing = result[b].Twa + int(math.Round(wb))
 			if bearing > 360 {
@@ -139,9 +139,9 @@ func TwaLine(context Context, winds map[string]*wind.Wind, start LatLon, bearing
 		duration += delta
 		now = now.Add(time.Duration(int(delta*60.0)) * time.Minute)
 		w, w1, x = findWinds(winds, now)
-		fmt.Println(w.File)
+		fmt.Println(w[0].File)
 		if w1 != nil {
-			fmt.Println(w1.File)
+			fmt.Println(w1[0].File)
 		}
 	}
 
