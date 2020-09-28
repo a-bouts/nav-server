@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"math"
 	"time"
 
@@ -35,11 +34,6 @@ func BearingLine(context Context, winds map[string][]*wind.Wind, start LatLon, b
 	now := time.Now().UTC().Add(time.Duration(delay) * time.Hour)
 
 	w, w1, x := findWinds(winds, now)
-
-	fmt.Println(w[0].File)
-	if w1 != nil {
-		fmt.Println(w1[0].File)
-	}
 
 	wb, _ := wind.Interpolate(w, w1, start.Lat, start.Lon, x)
 
@@ -76,10 +70,6 @@ func BearingLine(context Context, winds map[string][]*wind.Wind, start LatLon, b
 		duration += delta
 		now = now.Add(time.Duration(int(delta*60.0)) * time.Minute)
 		w, w1, x = findWinds(winds, now)
-		fmt.Println(w[0].File)
-		if w1 != nil {
-			fmt.Println(w1[0].File)
-		}
 	}
 
 	return result
@@ -93,11 +83,6 @@ func TwaLine(context Context, winds map[string][]*wind.Wind, start LatLon, beari
 	now := time.Now().UTC().Add(time.Duration(delay) * time.Hour)
 
 	w, w1, x := findWinds(winds, now)
-
-	fmt.Println(w[0].File)
-	if w1 != nil {
-		fmt.Println(w1[0].File)
-	}
 
 	wb, _ := wind.Interpolate(w, w1, start.Lat, start.Lon, x)
 
@@ -139,10 +124,6 @@ func TwaLine(context Context, winds map[string][]*wind.Wind, start LatLon, beari
 		duration += delta
 		now = now.Add(time.Duration(int(delta*60.0)) * time.Minute)
 		w, w1, x = findWinds(winds, now)
-		fmt.Println(w[0].File)
-		if w1 != nil {
-			fmt.Println(w1[0].File)
-		}
 	}
 
 	return result
