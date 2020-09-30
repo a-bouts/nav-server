@@ -150,7 +150,10 @@ func jump(context Context, start *Position, waypoint *Waypoint, src Position, b 
 	bearing := int(math.Round(b))
 	t := int(math.Round(twa))
 
-	boatSpeed, sail := context.polar.GetOptimBoatSpeed(twa, ws*3.6, context.boat, src.sail, context.winchMalus)
+	boatSpeed, sail := context.polar.GetBoatSpeed(twa, ws*3.6, context.boat)
+	if context.experiment {
+		boatSpeed, sail = context.polar.GetOptimBoatSpeed(twa, ws*3.6, context.boat, src.sail, context.winchMalus)
+	}
 	//if boatSpeed <= 0.0 {
 	//    return 0, nil
 	//}
