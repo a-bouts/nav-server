@@ -269,7 +269,7 @@ func midInterpolate(ws []*Wind, lat float64, lon float64, h float64) (float64, f
 
 
 	u1, v1 := ws[0].interpolate(lat, lon)
-	u2, v2 := ws[1]interpolate(lat, lon)
+	u2, v2 := ws[1].interpolate(lat, lon)
 	u := u2*h + u1*(1-h)
 	v := v2*h + v1*(1-h)
 
