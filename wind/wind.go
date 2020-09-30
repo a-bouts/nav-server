@@ -261,26 +261,27 @@ func (w Wind) interpolate(lat float64, lon float64) (float64, float64) {
 	return u, v
 }
 
-func midInterpolate(ws []*Wind, lat float64, lon float64) (float64, float64) {
+func midInterpolate(ws []*Wind, lat float64, lon float64, h float64) (float64, float64) {
 
-	u, v := 0., 0.
-	for _, w := range ws {
-		u1, v1 := w.interpolate(lat, lon)
-		u += u1
-		v += v1
+	if len(ws) == 1 {
+		return ws[0].interpolate(lat, lon)
 	}
-	u /= float64(len(ws))
-	v /= float64(len(ws))
+
+
+	u1, v1 := ws[0].interpolate(lat, lon)
+	u2, v2 := ws[1]interpolate(lat, lon)
+	u := u2*h + u1*(1-h)
+	v := v2*h + v1*(1-h)
 
 	return u, v
 }
 
 func Interpolate(w1 []*Wind, w2 []*Wind, lat float64, lon float64, h float64) (float64, float64) {
 
-	u, v := midInterpolate(w1, lat, lon)
+	u, v := midInterpolate(w1, lat, lon, 1-h)
 
 	if w2 != nil {
-		u2, v2 := midInterpolate(w2, lat, lon)
+		u2, v2 := midInterpolate(w2, lat, lon, h)
 		u = u2*h + u*(1-h)
 		v = v2*h + v*(1-h)
 	}
