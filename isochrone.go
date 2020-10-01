@@ -645,6 +645,11 @@ func Run(experiment bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp,
 			fmt.Printf("Waypoint %s reached %dj %.1fh\n", waypoint.Name, int(duration/24.0), float64(int(duration)%24)+duration-math.Floor(duration))
 			nextWaypoint = race.Reached(nextWaypoint)
 			if race.HasNextWaypoint(nextWaypoint) {
+				for validated := race.IsValidated(nextWaypoint); validated; validated = race.IsValidated(nextWaypoint) {
+					nextWaypoint = race.Reached(nextWaypoint)
+				}
+			}
+			if race.HasNextWaypoint(nextWaypoint) {
 				pos = newPos(waypoint)
 				waypoint = race.NextWaypoint(nextWaypoint)
 				dist := context.DistanceTo(pos.Latlon, waypoint.Latlons[0])
