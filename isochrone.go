@@ -333,7 +333,7 @@ func way(context Context, start *Position, src Position, wb float64, ws float64,
 
 				if alpha*alpha2 < 0 && beta*beta2 < 0 {
 					fmt.Println("reached")
-					fmt.Println("t", t, "a", a, "alpha", alpha, "a2", a2, "alpha2", alpha2, "b", b, "beta", beta, "b2", b2, "beta2", beta2)
+					//fmt.Println("t", t, "a", a, "alpha", alpha, "a2", a2, "alpha2", alpha2, "b", b, "beta", beta, "b2", b2, "beta2", beta2)
 					reachedResult[az] = res
 					reached = true
 				}
@@ -612,8 +612,6 @@ func Run(experiment bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp,
 		r1 := math.Abs(duration - math.Floor(duration/1.0)*1.0)
 		r6 := math.Abs(duration - math.Floor(duration/6.0)*6.0)
 		r24 := math.Abs(duration - math.Floor(duration/24.0)*24.0)
-
-		fmt.Printf("r %f %f %f %f\n", duration, r1, r6, r24)
 
 		if delta >= 1 || r1 < delta {
 			color := "#cc8dfc"
