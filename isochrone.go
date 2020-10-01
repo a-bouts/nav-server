@@ -414,40 +414,42 @@ func navigate(context Context, w []*wind.Wind, w1 []*wind.Wind, x float64, facto
 		}
 	}
 	wg.Wait()
-	toRemove := make([]int, 0, len(isochrone))
-	nbLtMax := 0
-	nbToAvoid := 0
-	nbLand := 0
-	nbFar := 0
-	nbFarFromMin := 0
-	for az, dst := range isochrone {
-		d, e := max[az]
-		if e && d > dst.fromDist {
-			nbLtMax++
-			toRemove = append(toRemove, az)
-		} else {
-			if isToAvoid(originalWaypoint, dst.Latlon) {
-				nbToAvoid++
-				toRemove = append(toRemove, az)
-			} else if context.land.IsLand(dst.Latlon.Lat, dst.Latlon.Lon) {
-				nbLand++
-				toRemove = append(toRemove, az)
-			} else if dst.fromDist+dst.distTo > context.maxDistFactor*start.distTo {
-				nbFar++
-				toRemove = append(toRemove, az)
-			} else if len(isochrone)-len(toRemove) > 25 && dst.distTo > 5**min {
-				nbFarFromMin++
+	if !reached {
+		toRemove := make([]int, 0, len(isochrone))
+		nbLtMax := 0
+		nbToAvoid := 0
+		nbLand := 0
+		nbFar := 0
+		nbFarFromMin := 0
+		for az, dst := range isochrone {
+			d, e := max[az]
+			if e && d > dst.fromDist {
+				nbLtMax++
 				toRemove = append(toRemove, az)
 			} else {
-				max[az] = dst.fromDist
+				if isToAvoid(originalWaypoint, dst.Latlon) {
+					nbToAvoid++
+					toRemove = append(toRemove, az)
+				} else if context.land.IsLand(dst.Latlon.Lat, dst.Latlon.Lon) {
+					nbLand++
+					toRemove = append(toRemove, az)
+				} else if dst.fromDist+dst.distTo > context.maxDistFactor*start.distTo {
+					nbFar++
+					toRemove = append(toRemove, az)
+				} else if len(isochrone)-len(toRemove) > 25 && dst.distTo > 5**min {
+					nbFarFromMin++
+					toRemove = append(toRemove, az)
+				} else {
+					max[az] = dst.fromDist
+				}
 			}
 		}
-	}
-	if nbLtMax+nbToAvoid+nbLand+nbFar+nbFarFromMin > 0 {
-		fmt.Println("Remove", nbLtMax, "< Max, ", nbToAvoid, "to avoid, ", nbLand, "landi, ", nbFar, "far from way, ", nbFarFromMin, "far from min")
-	}
-	for _, az := range toRemove {
-		delete(isochrone, az)
+		if nbLtMax+nbToAvoid+nbLand+nbFar+nbFarFromMin > 0 {
+			fmt.Println("Remove", nbLtMax, "< Max, ", nbToAvoid, "to avoid, ", nbLand, "landi, ", nbFar, "far from way, ", nbFarFromMin, "far from min")
+		}
+		for _, az := range toRemove {
+			delete(isochrone, az)
+		}
 	}
 	return isochrone, reached, minWayDuration
 }
