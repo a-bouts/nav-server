@@ -21,6 +21,7 @@ type Context struct {
 	land       *Land
 	winchMalus float64
 	LatLonSpherical
+	maxDistFactor float64
 }
 
 type Isochrone struct {
@@ -431,7 +432,7 @@ func navigate(context Context, w []*wind.Wind, w1 []*wind.Wind, x float64, facto
 			} else if context.land.IsLand(dst.Latlon.Lat, dst.Latlon.Lon) {
 				nbLand++
 				toRemove = append(toRemove, az)
-			} else if dst.fromDist+dst.distTo > 1.2*start.distTo {
+			} else if dst.fromDist+dst.distTo > context.maxDistFactor*start.distTo {
 				nbFar++
 				toRemove = append(toRemove, az)
 			} else if len(isochrone)-len(toRemove) > 25 && dst.distTo > 5**min {
@@ -497,11 +498,12 @@ func Run(experiment bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp,
 	z := polar.Init(polar.Options{Race: race.Polars, Sail: sail})
 
 	context := Context{
-		experiment: experiment,
-		polar:      &z,
-		boat:       polar.Boat{Foil: foil, Hull: hull},
-		land:       l,
-		winchMalus: winchMalus}
+		experiment:    experiment,
+		polar:         &z,
+		boat:          polar.Boat{Foil: foil, Hull: hull},
+		land:          l,
+		winchMalus:    winchMalus,
+		maxDistFactor: 1.2}
 
 	nextWaypoint := 0
 	for v := race.IsValidated(nextWaypoint); v; v = race.IsValidated(nextWaypoint) {
@@ -525,6 +527,12 @@ func Run(experiment bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp,
 	navDuration := 0.0
 
 	dist := context.DistanceTo(start, race.NextWaypoint(nextWaypoint).Latlons[0])
+	if dist/1000.0 < 1000.0 {
+		context.maxDistFactor = 1.5
+	}
+	if dist/1000.0 < 100.0 {
+		context.maxDistFactor = 2.0
+	}
 
 	boatSpeed, _ := context.polar.GetBoatSpeed(90, 10.0, context.boat)
 	distBetweenPoints := boatSpeed * 1.852 * delta * 1000.0
