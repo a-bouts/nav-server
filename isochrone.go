@@ -57,7 +57,7 @@ type Position struct {
 	windSpeed        float64
 	boatSpeed        float64
 	sail             byte
-	foil             bool
+	foil             int
 	distTo           float64
 	previousWindLine *Position
 	duration         float64
@@ -76,7 +76,7 @@ type WindLinePosition struct {
 	WindSpeed float64 `json:"windSpeed"`
 	BoatSpeed float64 `json:"boatSpeed"`
 	Sail      byte    `json:"sail"`
-	Foil      bool    `json:"foil"`
+	Foil      int     `json:"foil"`
 	Duration  float64 `json:"duration"`
 	Change    bool    `json:"change"`
 }
