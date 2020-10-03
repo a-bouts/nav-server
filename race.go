@@ -16,6 +16,7 @@ type Waypoint struct {
 type Race struct {
 	Name      string     `json:"name"`
 	Polars    string     `json:"polars"`
+	Boat      string     `json:"boat"`
 	Start     LatLon     `json:"start"`
 	Waypoints []Waypoint `json:"waypoints"`
 }

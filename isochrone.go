@@ -506,7 +506,7 @@ func Run(experiment bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp,
 
 	if experiment {
 		fmt.Println("Load new polars")
-		z = polar.Load(polar.Options{Race: race.Polars, Sail: sail})
+		z = polar.Load(polar.Options{Race: race.Boat, Sail: sail})
 	}
 
 	context := Context{
