@@ -16,7 +16,7 @@ import (
 
 type Context struct {
 	experiment bool
-	polar      *polar.Polar
+	polar      polar.Polar
 	boat       polar.Boat
 	land       *Land
 	winchMalus float64
@@ -144,7 +144,7 @@ func jump(context Context, start *Position, waypoint *Waypoint, src Position, b 
 	if diff > 180 {
 		diff = 360 - diff
 	}
-	if context.experiment {
+	if false { //context.experiment {
 		if math.Abs(twa) < 30 || math.Abs(twa) > 170 {
 			return 0, nil
 		}
@@ -153,10 +153,10 @@ func jump(context Context, start *Position, waypoint *Waypoint, src Position, b 
 	bearing := int(math.Round(b))
 	t := int(math.Round(twa))
 
-	boatSpeed, sail, isFoil := context.polar.GetBoatSpeed(twa, ws*3.6, context.boat)
-	if context.experiment {
-		boatSpeed, sail, isFoil = context.polar.GetOptimBoatSpeed(twa, ws*3.6, context.boat, src.sail, context.winchMalus)
-	}
+	boatSpeed, sail, isFoil := context.polar.GetBoatSpeed(twa, ws, context.boat)
+	//if context.experiment {
+	//	boatSpeed, sail = context.polar.GetOptimBoatSpeed(twa, ws*3.6, context.boat, src.sail, context.winchMalus)
+	//}
 	//if boatSpeed <= 0.0 {
 	//    return 0, nil
 	//}
@@ -206,7 +206,7 @@ func doorReached(context Context, start *Position, src Position, waypoint *Waypo
 	if twa > 180 {
 		twa = 360 - twa
 	}
-	boatSpeed, sail, isFoil := context.polar.GetBoatSpeed(twa, ws*3.6, context.boat)
+	boatSpeed, sail, isFoil := context.polar.GetBoatSpeed(twa, ws, context.boat)
 	durationToWaypoint := (distToWaypoint / 1000.0) / (boatSpeed * 1.852)
 
 	change := false
@@ -261,7 +261,7 @@ func way(context Context, start *Position, src Position, wb float64, ws float64,
 
 	bMin := 0
 	bMax := 360
-	if context.experiment {
+	if false { //context.experiment {
 		if start.fromDist > 0.0 {
 			bMin = start.bearing - 90
 			if bMin < 0 {
@@ -501,11 +501,17 @@ func findWinds(winds map[string][]*wind.Wind, m time.Time) ([]*wind.Wind, []*win
 
 func Run(experiment bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bearing int, currentSail byte, race Race, delta float64, maxDuration float64, delay int, sail int, foil bool, hull bool, winchMalus float64, stop bool) Navs {
 
-	z := polar.Init(polar.Options{Race: race.Polars, Sail: sail})
+	var z polar.Polar
+	z = polar.Init(polar.Options{Race: race.Polars, Sail: sail})
+
+	if experiment {
+		fmt.Println("Load new polars")
+		z = polar.Load(polar.Options{Race: race.Polars, Sail: sail})
+	}
 
 	context := Context{
 		experiment:    experiment,
-		polar:         &z,
+		polar:         z,
 		boat:          polar.Boat{Foil: foil, Hull: hull},
 		land:          l,
 		winchMalus:    winchMalus,
