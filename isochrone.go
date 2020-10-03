@@ -57,6 +57,7 @@ type Position struct {
 	windSpeed        float64
 	boatSpeed        float64
 	sail             byte
+	foil             bool
 	distTo           float64
 	previousWindLine *Position
 	duration         float64
@@ -75,6 +76,7 @@ type WindLinePosition struct {
 	WindSpeed float64 `json:"windSpeed"`
 	BoatSpeed float64 `json:"boatSpeed"`
 	Sail      byte    `json:"sail"`
+	Foil      bool    `json:"foil"`
 	Duration  float64 `json:"duration"`
 	Change    bool    `json:"change"`
 }
@@ -151,9 +153,9 @@ func jump(context Context, start *Position, waypoint *Waypoint, src Position, b 
 	bearing := int(math.Round(b))
 	t := int(math.Round(twa))
 
-	boatSpeed, sail := context.polar.GetBoatSpeed(twa, ws*3.6, context.boat)
+	boatSpeed, sail, isFoil := context.polar.GetBoatSpeed(twa, ws*3.6, context.boat)
 	if context.experiment {
-		boatSpeed, sail = context.polar.GetOptimBoatSpeed(twa, ws*3.6, context.boat, src.sail, context.winchMalus)
+		boatSpeed, sail, isFoil = context.polar.GetOptimBoatSpeed(twa, ws*3.6, context.boat, src.sail, context.winchMalus)
 	}
 	//if boatSpeed <= 0.0 {
 	//    return 0, nil
@@ -179,6 +181,7 @@ func jump(context Context, start *Position, waypoint *Waypoint, src Position, b 
 		windSpeed:        ws * 1.943844,
 		boatSpeed:        boatSpeed,
 		sail:             sail,
+		foil:             isFoil,
 		bonus:            bonus,
 		duration:         d + src.duration,
 		navDuration:      d,
@@ -203,7 +206,7 @@ func doorReached(context Context, start *Position, src Position, waypoint *Waypo
 	if twa > 180 {
 		twa = 360 - twa
 	}
-	boatSpeed, sail := context.polar.GetBoatSpeed(twa, ws*3.6, context.boat)
+	boatSpeed, sail, isFoil := context.polar.GetBoatSpeed(twa, ws*3.6, context.boat)
 	durationToWaypoint := (distToWaypoint / 1000.0) / (boatSpeed * 1.852)
 
 	change := false
@@ -232,6 +235,7 @@ func doorReached(context Context, start *Position, src Position, waypoint *Waypo
 			windSpeed:        ws * 1.943844,
 			boatSpeed:        boatSpeed,
 			sail:             sail,
+			foil:             isFoil,
 			bonus:            0,
 			distTo:           0,
 			duration:         durationToWaypoint + src.duration,
@@ -536,7 +540,7 @@ func Run(experiment bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp,
 		context.maxDistFactor = 2.0
 	}
 
-	boatSpeed, _ := context.polar.GetBoatSpeed(90, 10.0, context.boat)
+	boatSpeed, _, _ := context.polar.GetBoatSpeed(90, 10.0, context.boat)
 	distBetweenPoints := boatSpeed * 1.852 * delta * 1000.0
 	factor := 1.0 + math.Round((math.Pi/180.0)/math.Asin(distBetweenPoints/dist))
 
@@ -656,7 +660,7 @@ func Run(experiment bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp,
 				pos.distTo = dist
 				min = newPosition(context, pos.Latlon, waypoint)
 
-				boatSpeed, _ := context.polar.GetBoatSpeed(90, 10.0, context.boat)
+				boatSpeed, _, _ := context.polar.GetBoatSpeed(90, 10.0, context.boat)
 				distBetweenPoints := boatSpeed * 1.852 * delta * 1000.0
 				factor = 1.0 + math.Round((math.Pi/180.0)/math.Asin(distBetweenPoints/dist))
 
@@ -721,6 +725,7 @@ func Run(experiment bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp,
 			WindSpeed: next.windSpeed,
 			BoatSpeed: next.boatSpeed,
 			Sail:      next.sail,
+			Foil:      next.foil,
 			Duration:  last.duration,
 			Change:    next.change})
 		next = last
