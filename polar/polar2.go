@@ -122,6 +122,8 @@ func foil2(boat Boat2, twa float64, ws float64) float64 {
 }
 
 func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat) (float64, byte, int) {
+	ws = ws / 1.852001
+
 	t := twa
 	if t < 0 {
 		t = -1 * t
