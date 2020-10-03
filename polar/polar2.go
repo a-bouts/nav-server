@@ -160,5 +160,5 @@ func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat) (float64, 
 	// }
 	//
 
-	return maxBs, maxS, int(math.Round((f - 1.0) * 100 / boat.Foil.SpeedRatio))
+	return maxBs, maxS, int(math.Round((f - 1.0) * 100 / (boat.Foil.SpeedRatio - 1)))
 }
