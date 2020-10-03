@@ -140,6 +140,19 @@ func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat) (float64, 
 	maxS := byte(0)
 
 	for s, sail := range boat.Sail {
+		o := 0
+		if s == 2 || s == 3 {
+			o = 1
+		}
+		if s == 4 {
+			o = 2
+		}
+		if s == 5 || s == 6 {
+			o = 4
+		}
+		if context.Sails & o != o {
+			continue
+		}
 
 		bs := (sail.Speed[twaIndex0][twsIndex0]*twsFactor+sail.Speed[twaIndex0][twsIndex1]*(1-twsFactor))*twaFactor + (sail.Speed[twaIndex1][twsIndex0]*twsFactor+sail.Speed[twaIndex1][twsIndex1]*(1-twsFactor))*(1-twaFactor)
 

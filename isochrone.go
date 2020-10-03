@@ -512,7 +512,7 @@ func Run(experiment bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp,
 	context := Context{
 		experiment:    experiment,
 		polar:         z,
-		boat:          polar.Boat{Foil: foil, Hull: hull},
+		boat:          polar.Boat{Foil: foil, Hull: hull, Sails: sail},
 		land:          l,
 		winchMalus:    winchMalus,
 		maxDistFactor: 1.2}
