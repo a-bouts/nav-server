@@ -42,7 +42,8 @@ func BearingLine(context Context, winds map[string][]*wind.Wind, start LatLon, b
 	for b := 0; b < 360; b++ {
 		pos := Position{
 			Latlon:  start,
-			bearing: b}
+			bearing: b,
+		        sail: currentSail}
 		pos.twa = int(math.Round(float64(b) - wb))
 		if pos.twa < -180 {
 			pos.twa += 360
@@ -91,7 +92,8 @@ func TwaLine(context Context, winds map[string][]*wind.Wind, start LatLon, beari
 	for b := 0; b < 360; b++ {
 		pos := Position{
 			Latlon:  start,
-			bearing: b}
+			bearing: b,
+		        sail: currentSail}
 		pos.twa = int(math.Round(float64(b) - wb))
 		if pos.twa < -180 {
 			pos.twa += 360
