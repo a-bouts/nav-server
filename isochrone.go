@@ -44,6 +44,7 @@ type Sumup struct {
 	Start         time.Time        `json:"start"`
 	Duration      float64          `json:"duration"`
 	SailsDuration map[byte]float64 `json:"sailsDuration"`
+	FoilDuration  float64          `json:"foilDuration"`
 	Success       bool             `json:"success"`
 }
 
@@ -690,6 +691,7 @@ func Run(experiment bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp,
 	sails[byte(4)] = 0
 	sails[byte(5)] = 0
 	sails[byte(6)] = 0
+	foils := 0.0
 
 	for iso := len(isochrones) - 1; iso >= 0; iso-- {
 		first := true
@@ -719,9 +721,15 @@ func Run(experiment bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp,
 		Duration:  last.duration,
 		Change:    false})
 	sails[last.sail] += last.navDuration
+	if last.foil > 0 {
+		foils += last.navDuration
+	}
 	for ok := last.previousWindLine != nil; ok; ok = last.previousWindLine != nil {
 		last = *last.previousWindLine
 		sails[last.sail] += last.navDuration
+		if last.foil > 1 {
+			foils += last.navDuration
+		}
 		result.WindLine = append(result.WindLine, WindLinePosition{
 			Lat:       last.Latlon.Lat,
 			Lon:       last.Latlon.Lon,
@@ -741,6 +749,7 @@ func Run(experiment bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp,
 		Start:         startTime,
 		Duration:      duration,
 		SailsDuration: sails,
+		FoilDuration:  foils,
 		Success:       success}
 
 	msg := fmt.Sprintf("%s : %dj %.1fh - %d L %d H %d C0\n", startTime.Format("02 Jan 15:04"), int(duration/24.0), float64(int(duration)%24)+duration-math.Floor(duration), int(sails[byte(3)]+sails[byte(6)]), int(sails[byte(2)]+sails[byte(5)]), int(sails[byte(4)]))
