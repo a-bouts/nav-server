@@ -140,17 +140,13 @@ func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat) (float64, 
 	maxS := byte(0)
 
 	for s, sail := range boat.Sail {
-		o := 0
-		if s == 2 || s == 3 {
-			o = 1
+		if (sail.Name == "LIGHT_JIB" || sail.Name == "LIGHT_GNK") && (context.Sails & 1) != 1 {
+			continue
 		}
-		if s == 4 {
-			o = 2
+		if (sail.Name == "STAYSAIL" || sail.Name == "HEAVY_GNK") && (context.Sails & 4) != 4 {
+			continue
 		}
-		if s == 5 || s == 6 {
-			o = 4
-		}
-		if context.Sails & o != o {
+		if sail.Name == "CODE_0" && (context.Sails & 2) != 2 {
 			continue
 		}
 
