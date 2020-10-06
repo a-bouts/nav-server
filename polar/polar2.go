@@ -113,8 +113,8 @@ func foil2(boat Boat2, twa float64, ws float64) float64 {
 		cv = (ws - (boat.Foil.TwsMin - boat.Foil.TwsMerge)) / boat.Foil.TwsMerge
 	} else if ws < boat.Foil.TwsMax {
 		cv = 1
-	} else if ws < boat.Foil.TwsMax+boat.Foil.TwaMerge {
-		cv = (boat.Foil.TwsMax + boat.Foil.TwaMerge - ws) / boat.Foil.TwaMerge
+	} else if ws < boat.Foil.TwsMax+boat.Foil.TwsMerge {
+		cv = (boat.Foil.TwsMax + boat.Foil.TwsMerge - ws) / boat.Foil.TwsMerge
 	} else {
 		return 1.0
 	}
@@ -140,13 +140,13 @@ func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat) (float64, 
 	maxS := byte(0)
 
 	for s, sail := range boat.Sail {
-		if (sail.Name == "LIGHT_JIB" || sail.Name == "LIGHT_GNK") && (context.Sails & 1) != 1 {
+		if (sail.Name == "LIGHT_JIB" || sail.Name == "LIGHT_GNK") && (context.Sails&1) != 1 {
 			continue
 		}
-		if (sail.Name == "STAYSAIL" || sail.Name == "HEAVY_GNK") && (context.Sails & 4) != 4 {
+		if (sail.Name == "STAYSAIL" || sail.Name == "HEAVY_GNK") && (context.Sails&4) != 4 {
 			continue
 		}
-		if sail.Name == "CODE_0" && (context.Sails & 2) != 2 {
+		if sail.Name == "CODE_0" && (context.Sails&2) != 2 {
 			continue
 		}
 
