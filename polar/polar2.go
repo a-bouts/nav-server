@@ -99,7 +99,7 @@ func foil2(boat Boat2, twa float64, ws float64) float64 {
 	if twa <= boat.Foil.TwaMin-boat.Foil.TwaMerge {
 		return 1.0
 	} else if twa < boat.Foil.TwaMin {
-		ct = float64(twa-boat.Foil.TwaMin-boat.Foil.TwaMerge) / boat.Foil.TwaMerge
+		ct = float64(twa-(boat.Foil.TwaMin-boat.Foil.TwaMerge)) / boat.Foil.TwaMerge
 	} else if twa < boat.Foil.TwaMax {
 		ct = 1
 	} else if twa < boat.Foil.TwaMax+boat.Foil.TwaMerge {
@@ -110,7 +110,7 @@ func foil2(boat Boat2, twa float64, ws float64) float64 {
 	if ws <= boat.Foil.TwsMin-boat.Foil.TwsMerge {
 		return 1.0
 	} else if ws < boat.Foil.TwsMin {
-		cv = (ws - boat.Foil.TwsMin - boat.Foil.TwsMerge) / boat.Foil.TwsMerge
+		cv = (ws - (boat.Foil.TwsMin - boat.Foil.TwsMerge)) / boat.Foil.TwsMerge
 	} else if ws < boat.Foil.TwsMax {
 		cv = 1
 	} else if ws < boat.Foil.TwsMax+boat.Foil.TwaMerge {
