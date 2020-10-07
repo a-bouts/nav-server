@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 )
 
-type Waypoint struct {
+type RaceWaypoint struct {
 	Name      string        `json:"name"`
 	Latlons   []LatLon      `json:"latlons"`
 	Validated bool          `json:"validated"`
@@ -14,11 +14,11 @@ type Waypoint struct {
 }
 
 type Race struct {
-	Name      string     `json:"name"`
-	Polars    string     `json:"polars"`
-	Boat      string     `json:"boat"`
-	Start     LatLon     `json:"start"`
-	Waypoints []Waypoint `json:"waypoints"`
+	Name      string         `json:"name"`
+	Polars    string         `json:"polars"`
+	Boat      string         `json:"boat"`
+	Start     LatLon         `json:"start"`
+	Waypoints []RaceWaypoint `json:"waypoints"`
 }
 
 type Races struct {
@@ -37,19 +37,19 @@ func load() Race {
 	var rs []Race
 	content, _ := ioutil.ReadFile("races.json")
 	json.Unmarshal(content, &rs)
-	fmt.Println(rs)
+
 	return rs[0]
 }
 
 func (r Race) IsValidated(index int) bool {
-	return r.NextWaypoint(index).Validated
+	return r.Waypoints[index].Validated
 }
 
 func (r Race) HasNextWaypoint(index int) bool {
 	return index < len(r.Waypoints)
 }
 
-func (r Race) NextWaypoint(index int) Waypoint {
+func (r Race) NextWaypoint(index int) RaceWaypoint {
 	return r.Waypoints[index]
 }
 
