@@ -592,9 +592,17 @@ func Run(experiment bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp,
 	for ok := true; ok; ok = duration < maxDuration && len(buoys) > 0 && (!stop || !reached) {
 		d := delta
 		if context.experiment {
-			for k, v := range deltas {
-				if duration >= float64(k) {
-					d = v
+
+			ks := make([]int, len(deltas))
+			kj := 0
+			for k := range deltas {
+				ks[kj] = k
+				kj++
+			}
+			sort.Ints(ks)
+			for _, ke := range ks {
+				if duration >= float64(ke) {
+					d = deltas[ke]
 					break
 				}
 			}
