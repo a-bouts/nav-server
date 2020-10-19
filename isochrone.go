@@ -601,7 +601,7 @@ func Run(experiment bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp,
 			}
 			sort.Ints(ks)
 			for _, ke := range ks {
-				if duration >= float64(ke) {
+				if duration < float64(ke) {
 					d = deltas[ke]
 					break
 				}

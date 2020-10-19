@@ -83,6 +83,9 @@ func (race *Race) GetBuyos(context Context, start LatLon) []Buoy {
 		boatSpeed, _, _ := context.polar.GetBoatSpeed(90, 10.0, context.boat)
 		distBetweenPoints := boatSpeed * 1.852 * context.delta * 1000.0
 		factor := 1.0 + math.Round((math.Pi/180.0)/math.Asin(distBetweenPoints/dist))
+		if context.experiment {
+			factor = 3.0 + math.Round((math.Pi/180.0)/math.Asin(distBetweenPoints/dist))
+		}
 		b.setFactor(factor)
 	}
 
