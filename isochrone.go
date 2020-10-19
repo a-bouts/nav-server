@@ -505,7 +505,7 @@ func findWinds(winds map[string][]*wind.Wind, m time.Time) ([]*wind.Wind, []*win
 	return winds[keys[len(keys)-1]], nil, 0
 }
 
-func Run(experiment bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bearing int, currentSail byte, race Race, delta float64, maxDuration float64, delay int, sail int, foil bool, hull bool, winchMalus float64, stop bool) Navs {
+func Run(experiment bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bearing int, currentSail byte, race Race, delta float64, deltas map[int]float64, maxDuration float64, delay int, sail int, foil bool, hull bool, winchMalus float64, stop bool) Navs {
 
 	var z polar.Polar
 	z = polar.Init(polar.Options{Race: race.Polars, Sail: sail})
@@ -591,6 +591,14 @@ func Run(experiment bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp,
 	isochrones := make([]map[int]Position, 0, int(maxDuration/delta))
 	for ok := true; ok; ok = duration < maxDuration && len(buoys) > 0 && (!stop || !reached) {
 		d := delta
+		if context.experiment {
+			for k, v := range deltas {
+				if duration >= float64(k) {
+					d = v
+					break
+				}
+			}
+		}
 		// if duration < 3 && d > 1 {
 		// 	d = 1.0
 		// }
