@@ -70,6 +70,7 @@ type Position struct {
 	bonus            int //0 nothing, 1 line, 2 wind
 	change           bool
 	reached          bool
+	doorReached      string
 	isInIceLimits    bool
 }
 
@@ -385,9 +386,10 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 				// }
 
 				if alpha*alpha2 < 0 && beta*beta2 < 0 {
-					//fmt.Println("t", t, "a", a, "alpha", alpha, "a2", a2, "alpha2", alpha2, "b", b, "beta", beta, "b2", b2, "beta2", beta2)
+					fmt.Println("t", t, "a", a, "alpha", alpha, "a2", a2, "alpha2", alpha2, "b", b, "beta", beta, "b2", b2, "beta2", beta2)
 					reachedResult[az] = res
 					res.reached = true
+					res.doorReached = buoy.name()
 				}
 			}
 		}
@@ -468,13 +470,13 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 				if p == nil {
 					break
 				}
-				if p != nil && p.reached {
+				if p != nil && p.reached && p.doorReached == buoy.name() {
 					parentReached = true
 					break
 				}
 			}
 
-			if dst.reached || parentReached {
+			if dst.reached && dst.doorReached == buoy.name() || parentReached {
 				buoy.reach(context, dst.previousWindLine)
 			}
 			d, e := max[az]
@@ -632,6 +634,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 	success := true
 
 	var previousDoorIsochrones []map[int]Position
+	var previousDoorFactor float64
 
 	isochrones := make([]map[int]Position, 0, int(maxDuration/delta))
 	for ok := true; ok; ok = duration < maxDuration && len(buoys) > 0 && (!stop || !reached) {
@@ -670,7 +673,9 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 		if len(previousDoorIsochrones) > 0 {
 			for _, p := range previousDoorIsochrones[0] {
 				if p.duration <= duration+d {
-					nextIsochrone = previousDoorIsochrones[0]
+					for az, pdi := range previousDoorIsochrones[0] {
+						nextIsochrone[int(float64(az)/previousDoorFactor*buoy.getFactor())] = pdi
+					}
 					fmt.Printf("nextIsochrone : %d - %f %f\n", len(nextIsochrone), duration, p.duration)
 					d = p.duration - duration
 					previousDoorIsochrones = previousDoorIsochrones[1:len(previousDoorIsochrones)]
@@ -679,7 +684,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 			}
 		}
 
-		fmt.Printf("Nav %f:%.1f - %d(%d) to %s (%.1f km)\n", duration, d, len(nav), int(buoy.getFactor()), buoy.name(), min/1000.0)
+		fmt.Printf("Nav(%s) %f:%.1f - %d(%d) to %s (%.1f km)\n", buoy.name(), duration, d, len(nav), int(buoy.getFactor()), buoy.name(), min/1000.0)
 		nav, reached, navDuration = navigate(&context, now, buoy.getFactor(), max, &min, pos, nav, nextIsochrone, buoy, d)
 		fmt.Printf("NavDuration : %.1f - %d (%t)\n", navDuration, len(nav), reached)
 
@@ -744,11 +749,6 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 					}
 				}
 				fmt.Println(len(d.reachers.isochrones))
-				for _, iso := range isochrones {
-					for _, pt := range iso {
-						pt.reached = false
-					}
-				}
 				nav = d.reachers.isochrones[0]
 				for _, n := range nav {
 					now = initNow.Add(time.Duration(int(n.duration*60.0)) * time.Minute)
@@ -756,6 +756,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 					break
 				}
 				previousDoorIsochrones = d.reachers.isochrones[1:len(d.reachers.isochrones)]
+				previousDoorFactor = d.getFactor()
 			}
 			buoys = buoys[1:]
 			if len(buoys) > 0 {

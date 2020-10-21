@@ -67,14 +67,22 @@ func (r Race) Reached(index int) int {
 
 func (iceLimits *IceLimits) isInIceLimits(latLon *LatLon) bool {
 
+	lon := latLon.Lon
+	if lon > 180 {
+		lon -= 360
+	}
+	if lon < -180 {
+		lon += 360
+	}
+
 	if float64(iceLimits.MinLat) < latLon.Lat && latLon.Lat < float64(iceLimits.MaxLat) {
 		return false
 	}
 
 	if latLon.Lat > 0.0 {
 		for i := 0; i < len(iceLimits.North)-1; i++ {
-			if latLon.Lon >= iceLimits.North[i].Lon && latLon.Lon <= iceLimits.North[i+1].Lon {
-				lat := (iceLimits.North[i+1].Lon-latLon.Lon)/(iceLimits.North[i+1].Lon-iceLimits.North[i].Lon)*(iceLimits.North[i+1].Lat-iceLimits.North[i].Lat) + iceLimits.North[i].Lat
+			if lon >= iceLimits.North[i].Lon && lon <= iceLimits.North[i+1].Lon {
+				lat := (iceLimits.North[i+1].Lon-lon)/(iceLimits.North[i+1].Lon-iceLimits.North[i].Lon)*(iceLimits.North[i+1].Lat-iceLimits.North[i].Lat) + iceLimits.North[i].Lat
 				if latLon.Lat >= lat {
 					return true
 				}
@@ -83,8 +91,8 @@ func (iceLimits *IceLimits) isInIceLimits(latLon *LatLon) bool {
 		}
 	} else {
 		for i := 0; i < len(iceLimits.South)-1; i++ {
-			if latLon.Lon >= iceLimits.South[i].Lon && latLon.Lon <= iceLimits.South[i+1].Lon {
-				lat := (iceLimits.South[i+1].Lon-latLon.Lon)/(iceLimits.South[i+1].Lon-iceLimits.South[i].Lon)*(iceLimits.South[i+1].Lat-iceLimits.South[i].Lat) + iceLimits.South[i].Lat
+			if lon >= iceLimits.South[i].Lon && lon <= iceLimits.South[i+1].Lon {
+				lat := (iceLimits.South[i+1].Lon-lon)/(iceLimits.South[i+1].Lon-iceLimits.South[i].Lon)*(iceLimits.South[i+1].Lat-iceLimits.South[i].Lat) + iceLimits.South[i].Lat
 				if latLon.Lat <= lat {
 					return true
 				}
