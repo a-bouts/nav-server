@@ -9,7 +9,7 @@ import (
 
 type Boat2 struct {
 	Label                   string    `json:"label"`
-	GlobalSpeedRatio        int       `json:"globalSpeedRatio"`
+	GlobalSpeedRatio        float64   `json:"globalSpeedRatio"`
 	IceSpeedRatio           float64   `json:"iceSpeedRatio"`
 	AutoSailChangeTolerance float64   `json:"autoSailChangeTolerance"`
 	BadSailTolerance        float64   `json:"badSailTolerance"`
@@ -121,7 +121,7 @@ func foil2(boat Boat2, twa float64, ws float64) float64 {
 	return 1.0 + (boat.Foil.SpeedRatio-1)*ct*cv
 }
 
-func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat) (float64, byte, int) {
+func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat, isInIceLimits bool) (float64, byte, int) {
 	// convert m/s to kts
 	ws = ws * 1.9438444924406
 
@@ -158,6 +158,10 @@ func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat) (float64, 
 		}
 	}
 
+	maxBs *= boat.GlobalSpeedRatio
+	if isInIceLimits {
+		maxBs *= boat.IceSpeedRatio
+	}
 	if context.Hull {
 		maxBs *= boat.Hull.SpeedRatio
 	}

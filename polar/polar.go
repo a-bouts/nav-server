@@ -7,7 +7,7 @@ import (
 )
 
 type Polar interface {
-	GetBoatSpeed(twa float64, ws float64, boat Boat) (float64, byte, int)
+	GetBoatSpeed(twa float64, ws float64, boat Boat, isInIceLimits bool) (float64, byte, int)
 }
 
 type Zezo struct {
@@ -44,7 +44,7 @@ func Init(o Options) Zezo {
 	return z
 }
 
-func (z Zezo) GetBoatSpeed(twa float64, ws float64, boat Boat) (float64, byte, int) {
+func (z Zezo) GetBoatSpeed(twa float64, ws float64, boat Boat, isInIceLimits bool) (float64, byte, int) {
 	return z.GetBoatSpeed2(twa, ws*3.6, boat, z.options.Sail)
 }
 
@@ -60,7 +60,7 @@ func (z Zezo) GetOptimBoatSpeed(twa float64, ws float64, boat Boat, s byte, winc
 		o = 4
 	}
 	bs1, s1, f1 := z.GetBoatSpeed2(twa, ws, boat, o)
-	bs2, s2, f2 := z.GetBoatSpeed(twa, ws, boat)
+	bs2, s2, f2 := z.GetBoatSpeed(twa, ws, boat, false)
 
 	d1 := bs1 * 1.852 * 1.0 * 1000.0
 	d2 := bs2 * 1.852 * 1.0 * 1000.0

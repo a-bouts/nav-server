@@ -35,7 +35,7 @@ type Buoy interface {
 	toAvoid() [][][]float64
 	getFactor() float64
 	setFactor(float64)
-	reach(context Context, pos *Position)
+	reach(context *Context, pos *Position)
 }
 
 func (race *Race) GetBuyos(context Context, start LatLon) []Buoy {
@@ -80,10 +80,10 @@ func (race *Race) GetBuyos(context Context, start LatLon) []Buoy {
 			from = buoys[i-1].departure()
 		}
 		dist := context.DistanceTo(from, b.destination())
-		boatSpeed, _, _ := context.polar.GetBoatSpeed(90, 10.0, context.boat)
+		boatSpeed, _, _ := context.polar.GetBoatSpeed(90, 10.0, context.boat, false)
 		distBetweenPoints := boatSpeed * 1.852 * context.delta * 1000.0
 		factor := 1.0 + math.Round((math.Pi/180.0)/math.Asin(distBetweenPoints/dist))
-		if context.experiment {
+		if context.isExpes("progressive-intervales") {
 			factor = 3.0 + math.Round((math.Pi/180.0)/math.Asin(distBetweenPoints/dist))
 		}
 		b.setFactor(factor)
@@ -152,10 +152,10 @@ func (d Door) getFactor() float64 {
 	return d.factor
 }
 
-func (wp *Waypoint) reach(context Context, pos *Position) {
+func (wp *Waypoint) reach(context *Context, pos *Position) {
 }
 
-func (d *Door) reach(context Context, pos *Position) {
+func (d *Door) reach(context *Context, pos *Position) {
 
 	dist, az := context.DistanceAndBearingTo(d.departure(), pos.Latlon)
 

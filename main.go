@@ -15,25 +15,37 @@ import (
 
 	"github.com/a-bouts/nav-server/wind"
 	"github.com/a-bouts/nav-server/xmpp"
-	//import "os"
-	// _ "net/http/pprof"
+
+	_ "net/http/pprof"
 )
 
 type GoNav struct {
-	Experiment  bool    `json:"experiment"`
-	Start       LatLon  `json:"start"`
-	Bearing     int     `json:"bearing"`
-	CurrentSail byte    `json:"currentSail"`
-	Race        Race    `json:"race"`
-	Delta       float64 `json:"delta"`
-	MaxDuration float64 `json:"maxDuration"`
-	Delay       int     `json:"delay"`
-	Sail        int     `json:"sail"`
-	Foil        bool    `json:"foil"`
-	Hull        bool    `json:"hull"`
-	Winch       bool    `json:"winch"`
-	Malus       float64 `json:"malus"`
-	Stop        bool    `json:"stop"`
+	Expes       map[string]bool `json:"expes"`
+	Start       LatLon          `json:"start"`
+	Bearing     int             `json:"bearing"`
+	CurrentSail byte            `json:"currentSail"`
+	Race        Race            `json:"race"`
+	Delta       float64         `json:"delta"`
+	MaxDuration float64         `json:"maxDuration"`
+	Delay       int             `json:"delay"`
+	Sail        int             `json:"sail"`
+	Foil        bool            `json:"foil"`
+	Hull        bool            `json:"hull"`
+	Winch       bool            `json:"winch"`
+	Malus       float64         `json:"malus"`
+	Stop        bool            `json:"stop"`
+}
+
+func Expes(w http.ResponseWriter, req *http.Request) {
+
+	expes := []string{
+		"new-polars",
+		"progressive-intervales",
+		"sqrt-dist-from",
+		"optim",
+		"ice-limits"}
+
+	json.NewEncoder(w).Encode(expes)
 }
 
 func Refresh(w http.ResponseWriter, req *http.Request) {
@@ -42,18 +54,16 @@ func Refresh(w http.ResponseWriter, req *http.Request) {
 }
 
 func Navigate(w http.ResponseWriter, req *http.Request) {
-	// if *cpuprofile != "" {
-	// 	runtime.SetCPUProfileRate(300)
-	// 	f, err := os.Create(*cpuprofile)
-	// 	if err != nil {
-	// 		log.Fatal("could not create CPU profile: ", err)
-	// 	}
-	// 	defer f.Close()
-	// 	if err := pprof.StartCPUProfile(f); err != nil {
-	// 		log.Fatal("could not start CPU profile: ", err)
-	// 	}
-	// 	defer pprof.StopCPUProfile()
+	// runtime.SetCPUProfileRate(300)
+	// f, err := os.Create("profile")
+	// if err != nil {
+	// 	log.Fatal("could not create CPU profile: ", err)
 	// }
+	// defer f.Close()
+	// if err := pprof.StartCPUProfile(f); err != nil {
+	// 	log.Fatal("could not start CPU profile: ", err)
+	// }
+	// defer pprof.StopCPUProfile()
 
 	//params := mux.Vars(req)
 	var gonav GoNav
@@ -76,7 +86,7 @@ func Navigate(w http.ResponseWriter, req *http.Request) {
 		120:  3.0,
 		9999: 6.0}
 
-	isos := Run(gonav.Experiment, &l, winds, &x, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, deltas, gonav.MaxDuration, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, gonav.Stop)
+	isos := Run(gonav.Expes, &l, winds, &x, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, deltas, gonav.MaxDuration, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, gonav.Stop)
 
 	delta := time.Now().Sub(start)
 	fmt.Println(delta)
@@ -95,7 +105,7 @@ func BoatLines(w http.ResponseWriter, req *http.Request) {
 
 	start := time.Now()
 
-	lines := GetBoatLines(gonav.Experiment, winds, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus)
+	lines := GetBoatLines(gonav.Expes, winds, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus)
 
 	delta := time.Now().Sub(start)
 	fmt.Println(delta)
@@ -108,9 +118,6 @@ func TestLand(w http.ResponseWriter, req *http.Request) {
 
 	json.NewEncoder(w).Encode(isos)
 }
-
-var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
-var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
 var l Land
 var winds map[string][]*wind.Wind
@@ -173,6 +180,7 @@ func main() {
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/debug/nav/run", Navigate).Methods("POST")
 	router.HandleFunc("/debug/nav/refresh", Refresh).Methods("GET")
+	router.HandleFunc("/debug/nav/expes", Expes).Methods("GET")
 	router.HandleFunc("/debug/nav/test", TestLand).Methods("POST")
 	router.HandleFunc("/debug/nav/boatlines", BoatLines).Methods("POST")
 	log.Fatal(http.ListenAndServe(":8888", router))

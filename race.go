@@ -13,12 +13,20 @@ type RaceWaypoint struct {
 	ToAvoid   [][][]float64 `json:"toAvoid"`
 }
 
+type IceLimits struct {
+	North  []LatLon `json:"north"`
+	South  []LatLon `json:"south"`
+	MaxLat int      `json:"maxLat"`
+	MinLat int      `json:"minLat"`
+}
+
 type Race struct {
 	Name      string         `json:"name"`
 	Polars    string         `json:"polars"`
 	Boat      string         `json:"boat"`
 	Start     LatLon         `json:"start"`
 	Waypoints []RaceWaypoint `json:"waypoints"`
+	IceLimits IceLimits      `json:"ice_limits"`
 }
 
 type Races struct {
@@ -55,4 +63,35 @@ func (r Race) NextWaypoint(index int) RaceWaypoint {
 
 func (r Race) Reached(index int) int {
 	return index + 1
+}
+
+func (iceLimits *IceLimits) isInIceLimits(latLon *LatLon) bool {
+
+	if float64(iceLimits.MinLat) < latLon.Lat && latLon.Lat < float64(iceLimits.MaxLat) {
+		return false
+	}
+
+	if latLon.Lat > 0.0 {
+		for i := 0; i < len(iceLimits.North)-1; i++ {
+			if latLon.Lon >= iceLimits.North[i].Lon && latLon.Lon <= iceLimits.North[i+1].Lon {
+				lat := (iceLimits.North[i+1].Lon-latLon.Lon)/(iceLimits.North[i+1].Lon-iceLimits.North[i].Lon)*(iceLimits.North[i+1].Lat-iceLimits.North[i].Lat) + iceLimits.North[i].Lat
+				if latLon.Lat >= lat {
+					return true
+				}
+				return false
+			}
+		}
+	} else {
+		for i := 0; i < len(iceLimits.South)-1; i++ {
+			if latLon.Lon >= iceLimits.South[i].Lon && latLon.Lon <= iceLimits.South[i+1].Lon {
+				lat := (iceLimits.South[i+1].Lon-latLon.Lon)/(iceLimits.South[i+1].Lon-iceLimits.South[i].Lon)*(iceLimits.South[i+1].Lat-iceLimits.South[i].Lat) + iceLimits.South[i].Lat
+				if latLon.Lat <= lat {
+					return true
+				}
+				return false
+			}
+		}
+	}
+
+	return false
 }

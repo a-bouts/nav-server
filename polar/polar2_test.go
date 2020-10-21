@@ -53,27 +53,27 @@ func TestInterpolationIndex(t *testing.T) {
 func TestGetBoatSpeed(t *testing.T) {
 	z := Load(Options{Race: "arctic", Sail: 0})
 
-	ws, s, _ := z.GetBoatSpeed(0, 0, Boat{})
+	ws, s, _ := z.GetBoatSpeed(0, 0, Boat{}, false)
 	if ws != 0 || s != 0 {
 		t.Errorf("GetBoatSpeed(0, 0) = (%f, %d); want (0, 0)", ws, s)
 	}
 
-	ws, s, _ = z.GetBoatSpeed(60, 39.1, Boat{})
+	ws, s, _ = z.GetBoatSpeed(60, 39.1, Boat{}, false)
 	if math.Round(ws*1000000) != 14600400 || s != 2 {
 		t.Errorf("GetBoatSpeed(60, 39.1) = (%f, %d); want (14.600400, 2)", ws, s)
 	}
 
-	ws, s, _ = z.GetBoatSpeed(60, 39.1, Boat{Hull: true})
+	ws, s, _ = z.GetBoatSpeed(60, 39.1, Boat{Hull: true}, false)
 	if math.Round(ws*1000000) != 14644201 || s != 2 {
 		t.Errorf("GetBoatSpeed(60, 39.1, hull) = (%f, %d); want (14.644201, 2)", ws, s)
 	}
 
-	ws, s, _ = z.GetBoatSpeed(60, 39.1, Boat{Foil: true})
+	ws, s, _ = z.GetBoatSpeed(60, 39.1, Boat{Foil: true}, false)
 	if math.Round(ws*1000000) != 14600400 || s != 2 {
 		t.Errorf("GetBoatSpeed(60, 39.1, hull) = (%f, %d); want (14.600400, 2)", ws, s)
 	}
 
-	ws, s, _ = z.GetBoatSpeed(43, 38.6, Boat{})
+	ws, s, _ = z.GetBoatSpeed(43, 38.6, Boat{}, false)
 	if math.Round(ws*1000000) != 14600400 || s != 2 {
 		t.Errorf("GetBoatSpeed(60, 39.1, hull) = (%f, %d); want (14.600400, 2)", ws, s)
 	}
