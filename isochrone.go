@@ -688,6 +688,8 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 		nav, reached, navDuration = navigate(&context, now, buoy.getFactor(), max, &min, pos, nav, nextIsochrone, buoy, d)
 		fmt.Printf("NavDuration : %.1f - %d (%t)\n", navDuration, len(nav), reached)
 
+		duration += navDuration
+
 		keys := make([]int, len(nav))
 		j := 0
 		for k := range nav {
@@ -696,15 +698,15 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 		}
 		sort.Ints(keys)
 
-		r1 := math.Abs(duration - math.Floor(duration/1.0)*1.0)
-		r6 := math.Abs(duration - math.Floor(duration/6.0)*6.0)
-		r24 := math.Abs(duration - math.Floor(duration/24.0)*24.0)
+		r1 := math.Abs((duration + 0.00001) - math.Floor((duration+0.00001)/1.0)*1.0)
+		r6 := math.Abs((duration + 0.00001) - math.Floor((duration+0.00001)/6.0)*6.0)
+		r24 := math.Abs((duration + 0.00001) - math.Floor((duration+0.00001)/24.0)*24.0)
 
-		if delta >= 1 || r1 < delta {
+		if navDuration >= 1 || r1 < navDuration {
 			color := "#cc8dfc"
-			if r24 < delta {
+			if r24 < navDuration {
 				color = "#8dfccc"
-			} else if r6 < delta {
+			} else if r6 < navDuration {
 				color = "#fccc8d"
 			}
 			result.Navs[currentNav].Isochrones = append(result.Navs[currentNav].Isochrones, Isochrone{color, make([][]Position, 0, int(maxDuration/delta))})
@@ -725,8 +727,6 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 			}
 			result.Navs[currentNav].Isochrones[currentIso].Paths = append(result.Navs[currentNav].Isochrones[currentIso].Paths, navSlice)
 		}
-
-		duration += navDuration
 
 		if !reached && len(nav) == 0 && len(previousDoorIsochrones) == 0 {
 			fmt.Println("No way found")
