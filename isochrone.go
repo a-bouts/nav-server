@@ -487,10 +487,13 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 				maxDistFactor := context.maxDistFactor
 				if context.isExpes("max-dist") {
 			                maxDistFactor = 1.2
-					if dst.distTo/1000.0 < 100.0 {
-				                maxDistFactor = 1.8
-					} else if dst.distTo/1000.0 < 1000.0 {
-				                maxDistFactor = 1.5
+					refDist := math.Min(dst.fromDist, dst.distTo)
+					if refDist/1000.0 < 100.0 {
+				                //maxDistFactor = 1.8
+						maxDistFactor = 1.5 + 0.3 * (100.0 - refDist/1000.0)
+					} else if refDist/1000.0 < 1000.0 {
+				                //maxDistFactor = 1.5
+						maxDistFactor = 1.2 + 0.3 * (1000.0 - refDist/1000.0)
 					}
 				}
 				if isToAvoid(buoy, dst.Latlon) {
