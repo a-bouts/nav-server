@@ -484,13 +484,22 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 				nbLtMax++
 				toRemove = append(toRemove, az)
 			} else {
+				maxDistFactor := context.maxDistFactor
+				if context.isExpes("max-dist") {
+			                maxDistFactor = 1.2
+					if dst.distTo/1000.0 < 100.0 {
+				                maxDistFactor = 1.8
+					} else if dst.distTo/1000.0 < 1000.0 {
+				                maxDistFactor = 1.5
+					}
+				}
 				if isToAvoid(buoy, dst.Latlon) {
 					nbToAvoid++
 					toRemove = append(toRemove, az)
 				} else if context.land.IsLand(dst.Latlon.Lat, dst.Latlon.Lon) {
 					nbLand++
 					toRemove = append(toRemove, az)
-				} else if dst.fromDist+dst.distTo > context.maxDistFactor*start.distTo {
+				} else if dst.fromDist+dst.distTo > maxDistFactor*start.distTo {
 					nbFar++
 					toRemove = append(toRemove, az)
 				} else if len(isochrone)-len(toRemove) > 25 && dst.distTo > 5**min {

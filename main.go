@@ -43,6 +43,7 @@ func Expes(w http.ResponseWriter, req *http.Request) {
 		"progressive-intervales",
 		"sqrt-dist-from",
 		"optim",
+		"max-dist",
 		"ice-limits"}
 
 	json.NewEncoder(w).Encode(expes)
