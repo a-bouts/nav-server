@@ -174,10 +174,7 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 	bearing := int(math.Round(b))
 	t := int(math.Round(twa))
 
-	isInIceLimits := false
-	if context.isExpes("ice-limits") {
-		isInIceLimits = src.isInIceLimits
-	}
+	isInIceLimits := src.isInIceLimits
 	boatSpeed, sail, isFoil := context.polar.GetBoatSpeed(twa, ws, context.boat, isInIceLimits)
 	//if context.experiment {
 	//	boatSpeed, sail = context.polar.GetOptimBoatSpeed(twa, ws*3.6, context.boat, src.sail, context.winchMalus)
@@ -243,10 +240,7 @@ func doorReached(context *Context, start *Position, src *Position, buoy Buoy, wb
 		twa = 360 - twa
 	}
 
-	isInIceLimits := false
-	if context.isExpes("ice-limits") {
-		isInIceLimits = src.isInIceLimits
-	}
+	isInIceLimits := src.isInIceLimits
 	boatSpeed, sail, isFoil := context.polar.GetBoatSpeed(twa, ws, context.boat, isInIceLimits)
 	durationToWaypoint := (distToWaypoint / 1000.0) / (boatSpeed * 1.852)
 
