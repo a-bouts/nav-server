@@ -380,7 +380,7 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 				// }
 
 				if alpha*alpha2 < 0 && beta*beta2 < 0 {
-					fmt.Println("t", t, "a", a, "alpha", alpha, "a2", a2, "alpha2", alpha2, "b", b, "beta", beta, "b2", b2, "beta2", beta2)
+					//fmt.Println("t", t, "a", a, "alpha", alpha, "a2", a2, "alpha2", alpha2, "b", b, "beta", beta, "b2", b2, "beta2", beta2)
 					reachedResult[az] = res
 					res.reached = true
 					res.doorReached = buoy.name()
