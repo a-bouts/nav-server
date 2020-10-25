@@ -50,7 +50,7 @@ func Expes(w http.ResponseWriter, req *http.Request) {
 
 func Refresh(w http.ResponseWriter, req *http.Request) {
 
-	go LoadWinds()
+	go UpdateWinds()
 }
 
 func Navigate(w http.ResponseWriter, req *http.Request) {
@@ -139,6 +139,11 @@ func LoadWinds() {
 	*/
 }
 
+func UpdateWinds() {
+	fmt.Println("Update winds")
+	wind.Merge(winds)
+}
+
 func main() {
 
 	fs := flag.NewFlagSet("nav-server", flag.ExitOnError)
@@ -161,7 +166,7 @@ func main() {
 
 	s := gocron.NewScheduler()
 	jobxx := s.Every(1).Hour()
-	jobxx.Do(LoadWinds)
+	jobxx.Do(UpdateWinds)
 	//    job04 := s.Every(1).Day().At("05:00")
 	//    job04.Do(LoadWinds)
 	//    job10 := s.Every(1).Day().At("11:00")

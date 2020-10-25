@@ -42,13 +42,105 @@ func roundHours(hours int, interval int) string {
 	return ""
 }
 
+func Merge(winds map[string][]*Wind) error {
+
+	// On supprime les fichiers qui ne sont plus là
+	var toRemove []string
+	for k, ws := range winds {
+		if _, err := os.Stat("grib-data/" + ws[0].File); os.IsNotExist(err) {
+			toRemove = append(toRemove, k)
+		}
+	}
+	for _, k := range toRemove {
+		fmt.Println("Remove from winds", k)
+		delete(winds, k)
+	}
+
+	var files []string
+	err := filepath.Walk("grib-data/", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			log.Println(err)
+		} else if info.Mode().IsRegular() && !strings.HasSuffix(info.Name(), ".tmp") {
+			files = append(files, info.Name())
+		}
+		return nil
+	})
+	if err != nil {
+		fmt.Println("Error", err)
+		return nil
+	}
+
+	sort.Strings(files)
+
+	forecasts := make(map[int][]string)
+
+	for cpt, f := range files {
+
+		d := strings.Split(f, ".")[0]
+
+		h, err := strconv.Atoi(strings.Split(f, ".")[1][1:])
+		if err != nil {
+			fmt.Println("Error", err)
+			return nil
+		}
+		t, err := time.Parse("2006010215", d)
+		if err != nil {
+			fmt.Println("Error", err)
+			return nil
+		}
+
+		t = t.Add(time.Hour * time.Duration(h))
+
+		forecastHour := int(math.Round(t.Sub(time.Now()).Hours()))
+
+		if forecastHour < -3 && cpt < len(files)-1 {
+			continue
+		}
+
+		_, found := forecasts[forecastHour]
+
+		//quand c'est la prévision courante, on la conserve meme si une nouvelle prévision est arrivé
+		if !found || forecastHour >= 0 {
+			forecasts[forecastHour] = append(forecasts[forecastHour], f)
+		}
+	}
+
+	var keys []int
+	for k := range forecasts {
+		keys = append(keys, k)
+	}
+	sort.Ints(keys)
+	for _, k := range keys {
+		for _, file := range forecasts[k] {
+			d := strings.Split(file, ".")[0]
+			date, _ := time.Parse("2006010215", d)
+			f, _ := strconv.Atoi(strings.Split(file, ".")[1][1:])
+			date = date.Add(time.Hour * time.Duration(f))
+			sdate := date.Format("2006010215")
+
+			ws, found := winds[sdate]
+			if found {
+				if len(ws) == 2 || ws[0].File == file {
+					continue
+				}
+			}
+
+			wind := Init(date, file)
+			fmt.Println("Init", sdate, wind.File)
+			winds[sdate] = append(winds[sdate], &wind)
+		}
+	}
+
+	return nil
+}
+
 func LoadAll2() map[string][]*Wind {
 	winds := make(map[string][]*Wind)
 	var files []string
 	err := filepath.Walk("grib-data/", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			log.Println(err)
-		} else if info.Mode().IsRegular() {
+		} else if info.Mode().IsRegular() && !strings.HasSuffix(info.Name(), ".tmp") {
 			files = append(files, info.Name())
 		}
 		return nil
@@ -102,7 +194,6 @@ func LoadAll2() map[string][]*Wind {
 	sort.Ints(keys)
 	for _, k := range keys {
 		for _, file := range forecasts[k] {
-			fmt.Println(k, file)
 			d := strings.Split(file, ".")[0]
 			date, _ := time.Parse("2006010215", d)
 			f, _ := strconv.Atoi(strings.Split(file, ".")[1][1:])
@@ -167,8 +258,6 @@ func (w Wind) buildGrid(data []float64) [][]float64 {
 
 	grid := make([][]float64, w.NLat)
 
-	fmt.Printf("Build Grid (%d, %d) %d\n", w.NLat, nLon, len(data))
-
 	p := 0
 	max := 0.0
 	for j := uint32(0); j < w.NLat; j++ {
@@ -195,7 +284,6 @@ func Init(date time.Time, file string) Wind {
 	for _, message := range messages {
 		if message.Section0.Discipline == uint8(0) && message.Section4.ProductDefinitionTemplate.ParameterCategory == uint8(2) && message.Section4.ProductDefinitionTemplate.FirstSurface.Type == 103 && message.Section4.ProductDefinitionTemplate.FirstSurface.Value == 10 {
 			grid0, _ := message.Section3.Definition.(*griblib.Grid0)
-			fmt.Println(grid0.La1, grid0.Lo1, grid0.Di, grid0.Dj, grid0.Nj, grid0.Ni, message.Section4.ProductDefinitionTemplate)
 			w.Lat0 = float64(grid0.La1 / 1e6)
 			w.Lon0 = float64(grid0.Lo1 / 1e6)
 			w.ΔLat = float64(grid0.Di / 1e6)
