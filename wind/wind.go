@@ -167,7 +167,7 @@ func (w Wind) buildGrid(data []float64) [][]float64 {
 
 	grid := make([][]float64, w.NLat)
 
-	fmt.Printf("Build Grid (%d, %d)", w.NLat, nLon)
+	fmt.Printf("Build Grid (%d, %d) %d\n", w.NLat, nLon, len(data))
 
 	p := 0
 	max := 0.0
@@ -193,8 +193,9 @@ func Init(date time.Time, file string) Wind {
 	gribfile, _ := os.Open("grib-data/" + file)
 	messages, _ := griblib.ReadMessages(gribfile)
 	for _, message := range messages {
-		if message.Section0.Discipline == uint8(0) && message.Section4.ProductDefinitionTemplate.ParameterCategory == uint8(2) {
+		if message.Section0.Discipline == uint8(0) && message.Section4.ProductDefinitionTemplate.ParameterCategory == uint8(2) && message.Section4.ProductDefinitionTemplate.FirstSurface.Type == 103 && message.Section4.ProductDefinitionTemplate.FirstSurface.Value == 10 {
 			grid0, _ := message.Section3.Definition.(*griblib.Grid0)
+			fmt.Println(grid0.La1, grid0.Lo1, grid0.Di, grid0.Dj, grid0.Nj, grid0.Ni, message.Section4.ProductDefinitionTemplate)
 			w.Lat0 = float64(grid0.La1 / 1e6)
 			w.Lon0 = float64(grid0.Lo1 / 1e6)
 			w.ΔLat = float64(grid0.Di / 1e6)
@@ -268,7 +269,6 @@ func midInterpolate(ws []*Wind, lat float64, lon float64, h float64) (float64, f
 	if len(ws) == 1 {
 		return ws[0].interpolate(lat, lon)
 	}
-
 
 	u1, v1 := ws[0].interpolate(lat, lon)
 	u2, v2 := ws[1].interpolate(lat, lon)
