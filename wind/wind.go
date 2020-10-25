@@ -167,6 +167,8 @@ func (w Wind) buildGrid(data []float64) [][]float64 {
 
 	grid := make([][]float64, w.NLat)
 
+	fmt.Printf("Build Grid (%d, %d)", w.NLat, nLon)
+
 	p := 0
 	max := 0.0
 	for j := uint32(0); j < w.NLat; j++ {
