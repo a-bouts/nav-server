@@ -24,6 +24,7 @@ type Waypoint struct {
 	Name        string
 	Destination LatLon
 	ToAvoid     [][][]float64
+	Radius      int
 	factor      float64
 }
 
@@ -33,6 +34,7 @@ type Buoy interface {
 	destination() LatLon
 	departure() LatLon
 	toAvoid() [][][]float64
+	radius() int
 	getFactor() float64
 	setFactor(float64)
 	reach(context *Context, pos *Position)
@@ -49,7 +51,8 @@ func (race *Race) GetBuyos(context Context, start LatLon) []Buoy {
 			buoys = append(buoys, &Waypoint{
 				Name:        w.Name,
 				Destination: w.Latlons[0],
-				ToAvoid:     w.ToAvoid})
+				ToAvoid:     w.ToAvoid,
+				Radius:      w.Radius})
 		} else {
 			d, t := context.DistanceAndBearingTo(w.Latlons[0], w.Latlons[1])
 			a := t - 45
@@ -85,6 +88,9 @@ func (race *Race) GetBuyos(context Context, start LatLon) []Buoy {
 		factor := 1.0 + math.Round((math.Pi/180.0)/math.Asin(distBetweenPoints/dist))
 		if context.isExpes("progressive-intervales") {
 			factor = 3.0 + math.Round((math.Pi/180.0)/math.Asin(distBetweenPoints/dist))
+		}
+		if math.IsNaN(factor) {
+			factor = 1
 		}
 		b.setFactor(factor)
 	}
@@ -134,6 +140,14 @@ func (wp Waypoint) toAvoid() [][][]float64 {
 
 func (d Door) toAvoid() [][][]float64 {
 	return d.ToAvoid
+}
+
+func (wp Waypoint) radius() int {
+	return wp.Radius
+}
+
+func (d Door) radius() int {
+	return 0
 }
 
 func (wp *Waypoint) setFactor(factor float64) {

@@ -231,6 +231,11 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 
 func doorReached(context *Context, start *Position, src *Position, buoy Buoy, wb float64, ws float64, duration float64, factor float64) (bool, float64, *Position) {
 	distToWaypoint, az12 := context.DistanceAndBearingTo(src.Latlon, buoy.destination())
+
+	if buoy.radius() > 0 {
+		distToWaypoint -= float64(buoy.radius() * 1852)
+	}
+
 	twa := az12 - wb
 	if twa < -180 {
 		twa += 360

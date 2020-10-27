@@ -11,6 +11,7 @@ type RaceWaypoint struct {
 	Latlons   []LatLon      `json:"latlons"`
 	Validated bool          `json:"validated"`
 	ToAvoid   [][][]float64 `json:"toAvoid"`
+	Radius    int           `json:"radius"`
 }
 
 type IceLimits struct {
