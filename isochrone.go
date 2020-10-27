@@ -56,8 +56,8 @@ type Position struct {
 	az               int
 	fromDist         float64
 	bearing          int
-	twa              int
-	wind             int
+	twa              float64
+	wind             float64
 	windSpeed        float64
 	boatSpeed        float64
 	sail             byte
@@ -77,9 +77,9 @@ type Position struct {
 type WindLinePosition struct {
 	Lat       float64 `json:"lat"`
 	Lon       float64 `json:"lon"`
-	Twa       int     `json:"twa"`
+	Twa       float64 `json:"twa"`
 	Bearing   int     `json:"bearing"`
-	Wind      int     `json:"wind"`
+	Wind      float64 `json:"wind"`
 	WindSpeed float64 `json:"windSpeed"`
 	BoatSpeed float64 `json:"boatSpeed"`
 	Sail      byte    `json:"sail"`
@@ -172,7 +172,6 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 	}
 
 	bearing := int(math.Round(b))
-	t := int(math.Round(twa))
 
 	isInIceLimits := src.isInIceLimits
 	boatSpeed, sail, isFoil := context.polar.GetBoatSpeed(twa, ws, context.boat, isInIceLimits)
@@ -183,7 +182,7 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 	//    return 0, nil
 	//}
 	dist := boatSpeed * 1.852 * d * 1000.0
-	if int(math.Round(twa))*src.twa < 0 || sail != src.sail {
+	if twa*src.twa < 0 || sail != src.sail {
 		// changement de voile = vitesse / 2 pendant 5 minutes : on enlève 2 minutes et demi
 		dist = boatSpeed * 1.852 * (d*60.0 - context.winchMalus/2) / 60 * 1000.0
 		change = true
@@ -204,8 +203,8 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 		az:               int(math.Round(az * factor)),
 		fromDist:         fullDist,
 		bearing:          bearing,
-		twa:              t,
-		wind:             int(math.Round(wb)),
+		twa:              twa,
+		wind:             wb,
 		windSpeed:        ws * 1.943844,
 		boatSpeed:        boatSpeed,
 		sail:             sail,
@@ -245,7 +244,7 @@ func doorReached(context *Context, start *Position, src *Position, buoy Buoy, wb
 	durationToWaypoint := (distToWaypoint / 1000.0) / (boatSpeed * 1.852)
 
 	change := false
-	if int(math.Round(twa))*src.twa < 0 || sail != src.sail {
+	if twa*src.twa < 0 || sail != src.sail {
 		change = true
 		//dist := (boatSpeed / 2.0) * 1.852 * 5.0 / 60.0 * 1000.0
 		dist := (boatSpeed / 2.0) * 1.852 * context.winchMalus / 60.0 * 1000.0
@@ -272,8 +271,8 @@ func doorReached(context *Context, start *Position, src *Position, buoy Buoy, wb
 			az:               int(math.Round(az * factor)),
 			fromDist:         fullDist,
 			bearing:          int(math.Round(az12)),
-			twa:              int(math.Round(twa)),
-			wind:             int(math.Round(wb)),
+			twa:              twa,
+			wind:             wb,
 			windSpeed:        ws * 1.943844,
 			boatSpeed:        boatSpeed,
 			sail:             sail,
@@ -614,7 +613,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 		navDuration: 0.0} //float64(delay)}
 
 	wb, _ := wind.Interpolate(w, w1, pos.Latlon.Lat, pos.Latlon.Lon, x)
-	pos.twa = int(math.Round(float64(bearing) - wb))
+	pos.twa = float64(bearing) - wb
 	if pos.twa < -180 {
 		pos.twa += 360
 	}

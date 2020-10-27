@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/a-bouts/nav-server/polar"
@@ -10,7 +9,7 @@ import (
 )
 
 type BoatLine struct {
-	Twa  int      `json:"twa"`
+	Twa  float64  `json:"twa"`
 	Line []LatLon `json:"line"`
 }
 
@@ -52,7 +51,7 @@ func BearingLine(context *Context, winds map[string][]*wind.Wind, start LatLon, 
 			Latlon:  start,
 			bearing: b,
 			sail:    currentSail}
-		pos.twa = int(math.Round(float64(b) - wb))
+		pos.twa = float64(b) - wb
 		if pos.twa < -180 {
 			pos.twa += 360
 		}
@@ -102,7 +101,7 @@ func TwaLine(context Context, winds map[string][]*wind.Wind, start LatLon, beari
 			Latlon:  start,
 			bearing: b,
 			sail:    currentSail}
-		pos.twa = int(math.Round(float64(b) - wb))
+		pos.twa = float64(b) - wb
 		if pos.twa < -180 {
 			pos.twa += 360
 		}
@@ -120,12 +119,12 @@ func TwaLine(context Context, winds map[string][]*wind.Wind, start LatLon, beari
 
 			wb, ws := wind.Interpolate(w, w1, src.Lat, src.Lon, x)
 
-			var bearing = result[b].Twa + int(math.Round(wb))
+			var bearing = result[b].Twa + wb
 			if bearing > 360 {
 				bearing -= 360
 			}
 
-			_, pos := jump(&context, &Position{Latlon: start}, nil, hops[b], float64(bearing), wb, ws, delta, 1, nil)
+			_, pos := jump(&context, &Position{Latlon: start}, nil, hops[b], bearing, wb, ws, delta, 1, nil)
 
 			result[b].Line = append(result[b].Line, pos.Latlon)
 			hops[b] = pos
