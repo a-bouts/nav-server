@@ -639,7 +639,8 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 	var previousDoorFactor float64
 
 	isochrones := make([]map[int]Position, 0, int(maxDuration/delta))
-	for ok := true; ok; ok = duration < maxDuration && len(buoys) > 0 && (!stop || !reached) {
+	mustStop := false
+	for ok := true; ok; ok = duration < maxDuration && len(buoys) > 0 && !mustStop {
 		d := delta
 		if context.isExpes("progressive-intervales") {
 
@@ -741,6 +742,9 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 		if reached {
 			if buoy.buoyType() == "WAYPOINT" {
 				fmt.Printf("Waypoint %s reached %dj %.1fh\n", buoy.name(), int(duration/24.0), float64(int(duration)%24)+duration-math.Floor(duration))
+				if stop {
+					mustStop = true
+				}
 			} else if buoy.buoyType() == "DOOR" {
 				d := buoy.(*Door)
 				fmt.Printf("Door %s reached %dj %.1fh\n", buoy.name(), int(duration/24.0), float64(int(duration)%24)+duration-math.Floor(duration))
