@@ -259,8 +259,6 @@ func doorReached(context *Context, start *Position, src *Position, buoy Buoy, wb
 	}
 
 	if durationToWaypoint <= 1.5*duration {
-		fmt.Println("SHOULD BE OK !!!")
-
 		latlon := buoy.destination()
 
 		fullDist, az := 0.0, 0.0
@@ -298,7 +296,6 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 
 	reached, dur, point := doorReached(context, start, src, buoy, wb, ws, duration, factor)
 	if reached {
-		fmt.Println("IN FACT REACHED")
 		result[point.az] = point
 		return result, true, dur
 	}
@@ -480,14 +477,14 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 			} else {
 				maxDistFactor := context.maxDistFactor
 				if context.isExpes("max-dist") {
-			                maxDistFactor = 1.2
+					maxDistFactor = 1.2
 					refDist := math.Min(dst.fromDist, dst.distTo)
 					if refDist/1000.0 < 100.0 {
-				                //maxDistFactor = 1.8
-						maxDistFactor = 1.5 + 0.3 * (100.0 - refDist/1000.0)
+						//maxDistFactor = 1.8
+						maxDistFactor = 1.5 + 0.3*(100.0-refDist/1000.0)
 					} else if refDist/1000.0 < 1000.0 {
-				                //maxDistFactor = 1.5
-						maxDistFactor = 1.2 + 0.3 * (1000.0 - refDist/1000.0)
+						//maxDistFactor = 1.5
+						maxDistFactor = 1.2 + 0.3*(1000.0-refDist/1000.0)
 					}
 				}
 				if isToAvoid(buoy, dst.Latlon) {
@@ -748,13 +745,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 			} else if buoy.buoyType() == "DOOR" {
 				d := buoy.(*Door)
 				fmt.Printf("Door %s reached %dj %.1fh\n", buoy.name(), int(duration/24.0), float64(int(duration)%24)+duration-math.Floor(duration))
-				for _, gr := range d.reachers.isochrones {
-					for _, gr2 := range gr {
-						fmt.Println(gr2.duration, len(gr))
-						break
-					}
-				}
-				fmt.Println(len(d.reachers.isochrones))
+
 				nav = d.reachers.isochrones[0]
 				for _, n := range nav {
 					now = initNow.Add(time.Duration(int(n.duration*60.0)) * time.Minute)
@@ -811,7 +802,6 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 			break
 		}
 	}
-	fmt.Println(last.distTo)
 
 	next := last
 	result.WindLine = make([]WindLinePosition, 0, int(maxDuration/delta))

@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -86,10 +87,12 @@ func Navigate(w http.ResponseWriter, req *http.Request) {
 		120:  3.0,
 		9999: 6.0}
 
+	lock.RLock()
 	isos := Run(gonav.Expes, &l, winds, &x, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, deltas, gonav.MaxDuration, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, gonav.Stop)
+	lock.RUnlock()
 
 	delta := time.Now().Sub(start)
-	fmt.Println(delta)
+	fmt.Println("Navigation", delta)
 
 	json.NewEncoder(w).Encode(isos)
 }
@@ -105,10 +108,12 @@ func BoatLines(w http.ResponseWriter, req *http.Request) {
 
 	start := time.Now()
 
+	lock.RLock()
 	lines := GetBoatLines(gonav.Expes, winds, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus)
+	lock.RUnlock()
 
 	delta := time.Now().Sub(start)
-	fmt.Println(delta)
+	fmt.Println("Boatlines", delta)
 
 	json.NewEncoder(w).Encode(lines)
 }
@@ -122,10 +127,13 @@ func TestLand(w http.ResponseWriter, req *http.Request) {
 var l Land
 var winds map[string][]*wind.Wind
 var x xmpp.Xmpp
+var lock = sync.RWMutex{}
 
 func LoadWinds() {
 	fmt.Println("Load winds")
+	lock.Lock()
 	winds = wind.LoadAll2()
+	lock.Unlock()
 
 	/*    for d := 0 ; d < 6 ; d++ {
 	          Run(&l, winds, &x, LatLon{Lat: 40.430225, Lon: -73.9064}, 57, 1, load(), 3, 480, d, 7, true, true, 5.0, 1, false)
@@ -140,8 +148,9 @@ func LoadWinds() {
 }
 
 func UpdateWinds() {
-	fmt.Println("Update winds")
+	lock.Lock()
 	wind.Merge(winds)
+	lock.Unlock()
 }
 
 func main() {
@@ -165,7 +174,7 @@ func main() {
 	LoadWinds()
 
 	s := gocron.NewScheduler()
-	jobxx := s.Every(1).Hour()
+	jobxx := s.Every(15).Seconds()
 	jobxx.Do(UpdateWinds)
 	//    job04 := s.Every(1).Day().At("05:00")
 	//    job04.Do(LoadWinds)
@@ -176,9 +185,6 @@ func main() {
 	//    job22 := s.Every(1).Day().At("23:00")
 	//    job22.Do(LoadWinds)
 	go s.Start()
-
-	_, time := s.NextRun()
-	fmt.Println(time)
 
 	fmt.Println("Start server")
 
