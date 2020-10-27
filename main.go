@@ -87,9 +87,7 @@ func Navigate(w http.ResponseWriter, req *http.Request) {
 		120:  3.0,
 		9999: 6.0}
 
-	lock.RLock()
 	isos := Run(gonav.Expes, &l, winds, &x, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, deltas, gonav.MaxDuration, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, gonav.Stop)
-	lock.RUnlock()
 
 	delta := time.Now().Sub(start)
 	fmt.Println("Navigation", delta)
@@ -108,9 +106,7 @@ func BoatLines(w http.ResponseWriter, req *http.Request) {
 
 	start := time.Now()
 
-	lock.RLock()
 	lines := GetBoatLines(gonav.Expes, winds, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus)
-	lock.RUnlock()
 
 	delta := time.Now().Sub(start)
 	fmt.Println("Boatlines", delta)
