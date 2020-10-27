@@ -754,6 +754,11 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 				d := buoy.(*Door)
 				fmt.Printf("Door %s reached %dj %.1fh\n", buoy.name(), int(duration/24.0), float64(int(duration)%24)+duration-math.Floor(duration))
 
+				if len(d.reachers.irochrones) == 0 {
+					fmt.Println("No way found")
+					success = false
+					break
+				}
 				nav = d.reachers.isochrones[0]
 				for _, n := range nav {
 					now = initNow.Add(time.Duration(int(n.duration*60.0)) * time.Minute)
