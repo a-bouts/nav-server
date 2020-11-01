@@ -83,7 +83,7 @@ func (iceLimits *IceLimits) isInIceLimits(latLon *LatLon) bool {
 	if latLon.Lat > 0.0 {
 		for i := 0; i < len(iceLimits.North)-1; i++ {
 			if lon >= iceLimits.North[i].Lon && lon <= iceLimits.North[i+1].Lon {
-				lat := (iceLimits.North[i+1].Lon-lon)/(iceLimits.North[i+1].Lon-iceLimits.North[i].Lon)*(iceLimits.North[i+1].Lat-iceLimits.North[i].Lat) + iceLimits.North[i].Lat
+				lat := (lon - iceLimits.North[i+1].Lon)/(iceLimits.North[i+1].Lon-iceLimits.North[i].Lon)*(iceLimits.North[i+1].Lat-iceLimits.North[i].Lat) + iceLimits.North[i].Lat
 				if latLon.Lat >= lat {
 					return true
 				}
@@ -93,7 +93,7 @@ func (iceLimits *IceLimits) isInIceLimits(latLon *LatLon) bool {
 	} else {
 		for i := 0; i < len(iceLimits.South)-1; i++ {
 			if lon >= iceLimits.South[i].Lon && lon <= iceLimits.South[i+1].Lon {
-				lat := (iceLimits.South[i+1].Lon-lon)/(iceLimits.South[i+1].Lon-iceLimits.South[i].Lon)*(iceLimits.South[i+1].Lat-iceLimits.South[i].Lat) + iceLimits.South[i].Lat
+				lat := (lon - iceLimits.South[i+1].Lon)/(iceLimits.South[i+1].Lon-iceLimits.South[i].Lon)*(iceLimits.South[i+1].Lat-iceLimits.South[i].Lat) + iceLimits.South[i].Lat
 				if latLon.Lat <= lat {
 					return true
 				}
