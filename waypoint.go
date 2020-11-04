@@ -17,7 +17,7 @@ type Door struct {
 }
 
 type Reachers struct {
-	isochrones []map[int]Position
+	isochrones []map[int]*Alternative
 }
 
 type Waypoint struct {
@@ -37,7 +37,7 @@ type Buoy interface {
 	radius() int
 	getFactor() float64
 	setFactor(float64)
-	reach(context *Context, pos *Position)
+	reach(context *Context, alt *Alternative)
 }
 
 func (race *Race) GetBuyos(context Context, start LatLon) []Buoy {
@@ -87,7 +87,7 @@ func (race *Race) GetBuyos(context Context, start LatLon) []Buoy {
 		distBetweenPoints := boatSpeed * 1.852 * context.delta * 1000.0
 		factor := 1.0 + math.Round((math.Pi/180.0)/math.Asin(distBetweenPoints/dist))
 		if context.isExpes("progressive-intervales") {
-			factor = 3.0 + math.Round((math.Pi/180.0)/math.Asin(distBetweenPoints/dist))
+			factor = 1.0 + math.Round((math.Pi/180.0)/math.Asin(distBetweenPoints/dist))
 		}
 		if math.IsNaN(factor) {
 			factor = 1
@@ -166,34 +166,37 @@ func (d Door) getFactor() float64 {
 	return d.factor
 }
 
-func (wp *Waypoint) reach(context *Context, pos *Position) {
+func (wp *Waypoint) reach(context *Context, alt *Alternative) {
 }
 
-func (d *Door) reach(context *Context, pos *Position) {
+func (d *Door) reach(context *Context, alt *Alternative) {
+	pos := alt.getBest()
 
 	dist, az := context.DistanceAndBearingTo(d.departure(), pos.Latlon)
 
-	var last map[int]Position
+	var last map[int]*Alternative
 
 	if len(d.reachers.isochrones) > 0 {
 		last = d.reachers.isochrones[len(d.reachers.isochrones)-1]
 
 		for _, v := range last {
-			if v.duration != pos.duration {
-				last = make(map[int]Position)
+			if v.getBest().duration != pos.duration {
+				last = make(map[int]*Alternative)
 				d.reachers.isochrones = append(d.reachers.isochrones, last)
 			}
 			break
 		}
 	} else {
-		last = make(map[int]Position)
+		last = make(map[int]*Alternative)
 		d.reachers.isochrones = append(d.reachers.isochrones, last)
 	}
 
 	a := int(math.Round(az * d.getFactor()))
 	_, found := last[a]
-	if !found || last[a].fromDist < dist {
-		last[a] = Position{
+	if !found || last[a].getBest().fromDist < dist {
+		last[a] = &Alternative{
+			best: alt.best}
+		last[a].alternatives[alt.best] = &Position{
 			Latlon:           pos.Latlon,
 			az:               a,
 			fromDist:         dist,

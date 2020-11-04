@@ -51,6 +51,11 @@ type Sumup struct {
 	Success       bool             `json:"success"`
 }
 
+type Alternative struct {
+	best         int
+	alternatives [14]*Position
+}
+
 type Position struct {
 	Latlon           LatLon `json:"latlon"`
 	az               int
@@ -72,6 +77,7 @@ type Position struct {
 	reached          bool
 	doorReached      string
 	isInIceLimits    bool
+	fromAlternative  bool
 }
 
 type WindLinePosition struct {
@@ -148,7 +154,7 @@ func isToAvoid(buoy Buoy, p LatLon) bool {
 
 var cartesian LatLonHaversine = LatLonHaversine{}
 
-func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64, wb float64, ws float64, d float64, factor float64, min *float64) (int, *Position) {
+func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64, wb float64, ws float64, d float64, factor float64, min *float64, isAlternative bool) (int, *Position) {
 	bonus := 0
 	change := false
 
@@ -183,6 +189,9 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 	//}
 	dist := boatSpeed * 1.852 * d * 1000.0
 	if twa*src.twa < 0 || sail != src.sail {
+		if isAlternative {
+			return 0, nil
+		}
 		// changement de voile = vitesse / 2 pendant 5 minutes : on enlève 2 minutes et demi
 		dist = boatSpeed * 1.852 * (d*60.0 - context.winchMalus/2) / 60 * 1000.0
 		change = true
@@ -214,7 +223,8 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 		duration:         d + src.duration,
 		navDuration:      d,
 		previousWindLine: src,
-		change:           change}
+		change:           change,
+		fromAlternative:  isAlternative}
 
 	if buoy != nil {
 		if context.isExpes("sqrt-dist-from") {
@@ -295,12 +305,33 @@ func doorReached(context *Context, start *Position, src *Position, buoy Buoy, wb
 	return false, 0, nil
 }
 
-func way(context *Context, start *Position, src *Position, wb float64, ws float64, duration float64, buoy Buoy, isochrone map[int]Position, factor float64, min *float64) (map[int](*Position), bool, float64) {
-	result := make(map[int](*Position))
+func alternative(position *Position) int {
+	if position.twa >= 0 {
+		return int(position.sail) // 0 - 6
+	} else {
+		return 7 + int(position.sail) // 7 - 13
+	}
+
+}
+
+func getAlternative(p *Position) *Alternative {
+	a := alternative(p)
+	alt := Alternative{
+		best: a}
+	alt.alternatives[a] = p
+	return &alt
+}
+
+func (alt *Alternative) getBest() *Position {
+	return alt.alternatives[alt.best]
+}
+
+func way(context *Context, start *Position, src *Position, wb float64, ws float64, duration float64, buoy Buoy, factor float64, min *float64, isAlternative bool) (map[int](*Alternative), bool, float64) {
+	result := make(map[int](*Alternative))
 
 	reached, dur, point := doorReached(context, start, src, buoy, wb, ws, duration, factor)
 	if reached {
-		result[point.az] = point
+		result[point.az] = getAlternative(point)
 		return result, true, dur
 	}
 
@@ -321,30 +352,54 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 
 	if bMax > bMin {
 		for b := float64(bMin); b < float64(bMax); b += 1.0 {
-			az, to := jump(context, start, buoy, src, b, wb, ws, duration, factor, min)
+			az, to := jump(context, start, buoy, src, b, wb, ws, duration, factor, min, isAlternative)
 			if to != nil {
 				prev, exists := result[az]
-				if !exists || prev.fromDist < to.fromDist {
-					result[az] = to
+				a := alternative(to)
+				if !exists {
+					result[az] = getAlternative(to)
+				} else {
+					if prev.alternatives[a] == nil || prev.alternatives[a].fromDist < to.fromDist {
+						prev.alternatives[a] = to
+					}
+					if prev.alternatives[prev.best].fromDist < to.fromDist {
+						prev.best = a
+					}
 				}
 			}
 		}
 	} else {
 		for b := float64(bMin); b < 360.0; b += 1.0 {
-			az, to := jump(context, start, buoy, src, b, wb, ws, duration, factor, min)
+			az, to := jump(context, start, buoy, src, b, wb, ws, duration, factor, min, false)
 			if to != nil {
 				prev, exists := result[az]
-				if !exists || prev.fromDist < to.fromDist {
-					result[az] = to
+				a := alternative(to)
+				if !exists {
+					result[az] = getAlternative(to)
+				} else {
+					if prev.alternatives[a] == nil || prev.alternatives[a].fromDist < to.fromDist {
+						prev.alternatives[a] = to
+					}
+					if prev.alternatives[prev.best].fromDist < to.fromDist {
+						prev.best = a
+					}
 				}
 			}
 		}
 		for b := 0.0; b < float64(bMax); b += 1.0 {
-			az, to := jump(context, start, buoy, src, b, wb, ws, duration, factor, min)
+			az, to := jump(context, start, buoy, src, b, wb, ws, duration, factor, min, false)
 			if to != nil {
 				prev, exists := result[az]
-				if !exists || prev.fromDist < to.fromDist {
-					result[az] = to
+				a := alternative(to)
+				if !exists {
+					result[az] = getAlternative(to)
+				} else {
+					if prev.alternatives[a] == nil || prev.alternatives[a].fromDist < to.fromDist {
+						prev.alternatives[a] = to
+					}
+					if prev.alternatives[prev.best].fromDist < to.fromDist {
+						prev.best = a
+					}
 				}
 			}
 		}
@@ -365,16 +420,17 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 		// }
 
 		reached := false
-		reachedResult := make(map[int](*Position))
+		reachedResult := make(map[int](*Alternative))
 		for az, res := range result {
+			alt := res.alternatives[res.best]
 			//check if bearing allow to cross the door
-			if b < t && (a < b && float64(res.bearing) > a && float64(res.bearing) < b || a > b && (float64(res.bearing) > a || float64(res.bearing) < b)) {
-				a2 := context.BearingTo(res.Latlon, buoy.(*Door).Left)
+			if b < t && (a < b && float64(alt.bearing) > a && float64(alt.bearing) < b || a > b && (float64(alt.bearing) > a || float64(alt.bearing) < b)) {
+				a2 := context.BearingTo(alt.Latlon, buoy.(*Door).Left)
 				alpha2 := 180 + a2 - t
 				if a2 > 180 {
 					alpha2 = alpha2 - 360
 				}
-				b2 := context.BearingTo(res.Latlon, buoy.(*Door).Right)
+				b2 := context.BearingTo(alt.Latlon, buoy.(*Door).Right)
 				beta2 := b2 - t
 				// if b2 > 180 {
 				// 	beta2 = beta2 - 360
@@ -383,8 +439,8 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 				if alpha*alpha2 < 0 && beta*beta2 < 0 {
 					//fmt.Println("t", t, "a", a, "alpha", alpha, "a2", a2, "alpha2", alpha2, "b", b, "beta", beta, "b2", b2, "beta2", beta2)
 					reachedResult[az] = res
-					res.reached = true
-					res.doorReached = buoy.name()
+					alt.reached = true
+					alt.doorReached = buoy.name()
 				}
 			}
 		}
@@ -396,7 +452,7 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 	return result, false, duration
 }
 
-func navigate(context *Context, now time.Time, factor float64, max map[int]float64, min *float64, start *Position, previous_isochrone map[int]Position, isochrone map[int]Position, buoy Buoy, duration float64) (map[int]Position, bool, float64) {
+func navigate(context *Context, now time.Time, factor float64, max map[int]float64, min *float64, start *Position, previous_isochrone map[int]*Alternative, isochrone map[int]*Alternative, buoy Buoy, duration float64) (map[int]*Alternative, bool, float64) {
 	reached := false
 	var lock = sync.RWMutex{}
 
@@ -406,47 +462,66 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 
 	w, w1, x := findWinds(context.winds, now)
 
-	for _, src := range previous_isochrone {
-		cpt++
-		wg.Add(1)
-
-		go func(src Position) {
-
-			wb, ws := wind.Interpolate(w, w1, src.Latlon.Lat, src.Latlon.Lon, x)
-
-			way, reachedByWay, wayDuration := way(context, start, &src, wb, ws, duration, buoy, isochrone, factor, min)
-			if reachedByWay {
-				if buoy.buoyType() == "WAYPOINT" {
-					for b, dst := range way {
-						lock.Lock()
-						_, exists := isochrone[b]
-						if !exists || len(isochrone) > 1 {
-							isochrone = make(map[int]Position)
-						}
-						if !exists || isochrone[b].duration > wayDuration {
-							isochrone[b] = *dst
-							minWayDuration = wayDuration
-						}
-						lock.Unlock()
-					}
-				}
-				reached = true
-			} else if !reached {
-				for az, dst := range way {
-					lock.RLock()
-					prev, exists := isochrone[az]
-					lock.RUnlock()
-					if !exists || prev.fromDist < dst.fromDist {
-						lock.Lock()
-						isochrone[az] = *dst
-						lock.Unlock()
-					}
-				}
+	expeAlternatives := context.isExpes("alternatives")
+	for _, alt := range previous_isochrone {
+		for a, src := range alt.alternatives {
+			if !expeAlternatives && a != alt.best || src == nil {
+				continue
 			}
-			wg.Done()
-		}(src)
-		if cpt%15 == 0 {
-			wg.Wait()
+			isAlternative := a != alt.best
+
+			cpt++
+			wg.Add(1)
+
+			go func(src *Position) {
+
+				wb, ws := wind.Interpolate(w, w1, src.Latlon.Lat, src.Latlon.Lon, x)
+
+				way, reachedByWay, wayDuration := way(context, start, src, wb, ws, duration, buoy, factor, min, isAlternative)
+				if reachedByWay {
+					if buoy.buoyType() == "WAYPOINT" {
+						for b, dst := range way {
+							lock.Lock()
+							_, exists := isochrone[b]
+							if !exists || len(isochrone) > 1 {
+								isochrone = make(map[int]*Alternative)
+							}
+							if !exists || isochrone[b].alternatives[isochrone[b].best].duration > wayDuration {
+								isochrone[b] = dst
+								minWayDuration = wayDuration
+							}
+							lock.Unlock()
+						}
+					}
+					reached = true
+				} else if !reached {
+					for az, dst := range way {
+						lock.RLock()
+						prev, exists := isochrone[az]
+						lock.RUnlock()
+						if !exists {
+							lock.Lock()
+							isochrone[az] = dst
+							lock.Unlock()
+						} else {
+							lock.Lock()
+							for a, alt := range dst.alternatives {
+								if alt != nil && (prev.alternatives[a] == nil || prev.alternatives[a].fromDist < alt.fromDist) {
+									prev.alternatives[a] = alt
+								}
+							}
+							if prev.alternatives[prev.best].fromDist < dst.alternatives[dst.best].fromDist {
+								prev.best = dst.best
+							}
+							lock.Unlock()
+						}
+					}
+				}
+				wg.Done()
+			}(src)
+			if cpt%75 == 0 {
+				wg.Wait()
+			}
 		}
 	}
 	wg.Wait()
@@ -457,9 +532,11 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 		nbLand := 0
 		nbFar := 0
 		nbFarFromMin := 0
-		for az, dst := range isochrone {
+		nbAlternatives := 0
+		for az, alt := range isochrone {
+			dst := alt.alternatives[alt.best]
 			parentReached := false
-			p := &dst
+			p := dst
 			for i := 0; i < 10; i++ {
 				p = p.previousWindLine
 				if p == nil {
@@ -472,7 +549,7 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 			}
 
 			if dst.reached && dst.doorReached == buoy.name() || parentReached {
-				buoy.reach(context, dst.previousWindLine)
+				buoy.reach(context, alt)
 			}
 			d, e := max[az]
 			if e && d > dst.fromDist {
@@ -505,11 +582,17 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 					toRemove = append(toRemove, az)
 				} else {
 					max[az] = dst.fromDist
+					for i := 0; i < 14; i++ {
+						if i != alt.best && alt.alternatives[i] != nil && alt.alternatives[i].fromDist < dst.previousWindLine.fromDist {
+							alt.alternatives[i] = nil
+							nbAlternatives++
+						}
+					}
 				}
 			}
 		}
 		if nbLtMax+nbToAvoid+nbLand+nbFar+nbFarFromMin > 0 {
-			fmt.Println("Remove", nbLtMax, "< Max, ", nbToAvoid, "to avoid, ", nbLand, "landi, ", nbFar, "far from way, ", nbFarFromMin, "far from min")
+			fmt.Println("Remove", nbLtMax, "< Max, ", nbToAvoid, "to avoid, ", nbLand, "landi, ", nbFar, "far from way, ", nbFarFromMin, "far from min, ", nbAlternatives, "bad alternatives")
 		}
 		for _, az := range toRemove {
 			delete(isochrone, az)
@@ -591,7 +674,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 	}
 	w, w1, x := findWinds(winds, now)
 
-	nav := make(map[int]Position)
+	nav := make(map[int]*Alternative)
 	reached := false
 	navDuration := 0.0
 
@@ -625,7 +708,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 	if pos.twa > 180 {
 		pos.twa = pos.twa - 360
 	}
-	nav[pos.az] = *pos
+	nav[pos.az] = getAlternative(pos)
 
 	max := make(map[int]float64, int(float64(360)*buoy.getFactor()))
 	maxMax := 0.0
@@ -640,10 +723,10 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 
 	success := true
 
-	var previousDoorIsochrones []map[int]Position
+	var previousDoorIsochrones []map[int]*Alternative
 	var previousDoorFactor float64
 
-	isochrones := make([]map[int]Position, 0, int(maxDuration/delta))
+	isochrones := make([]map[int]*Alternative, 0, int(maxDuration/delta))
 	mustStop := false
 	for ok := true; ok; ok = duration < maxDuration && len(buoys) > 0 && !mustStop {
 		d := delta
@@ -677,15 +760,15 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 			}
 		}
 
-		nextIsochrone := make(map[int]Position)
+		nextIsochrone := make(map[int]*Alternative)
 		if len(previousDoorIsochrones) > 0 {
 			for _, p := range previousDoorIsochrones[0] {
-				if p.duration <= duration+d {
+				if p.getBest().duration <= duration+d {
 					for az, pdi := range previousDoorIsochrones[0] {
 						nextIsochrone[int(float64(az)/previousDoorFactor*buoy.getFactor())] = pdi
 					}
-					fmt.Printf("nextIsochrone : %d - %f %f\n", len(nextIsochrone), duration, p.duration)
-					d = p.duration - duration
+					fmt.Printf("nextIsochrone : %d - %f %f\n", len(nextIsochrone), duration, p.getBest().duration)
+					d = p.getBest().duration - duration
 					previousDoorIsochrones = previousDoorIsochrones[1:len(previousDoorIsochrones)]
 				}
 				break
@@ -694,7 +777,16 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 
 		fmt.Printf("Nav(%s) %f:%.1f - %d(%d) to %s (%.1f km)\n", buoy.name(), duration, d, len(nav), int(buoy.getFactor()), buoy.name(), min/1000.0)
 		nav, reached, navDuration = navigate(&context, now, buoy.getFactor(), max, &min, pos, nav, nextIsochrone, buoy, d)
-		fmt.Printf("NavDuration : %.1f - %d (%t)\n", navDuration, len(nav), reached)
+
+		nbAlternatives := 0
+		for _, na := range nav {
+			nbAlternatives--
+			for range na.alternatives {
+				nbAlternatives++
+			}
+		}
+
+		fmt.Printf("NavDuration : %.1f - %d(+%d) (%t)\n", navDuration, len(nav), nbAlternatives, reached)
 
 		duration += navDuration
 
@@ -730,7 +822,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 					navSlice = make([]Position, 0, len(nav))
 				}
 				//		fmt.Println(int(duration), k, nav[k])
-				navSlice = append(navSlice, nav[k])
+				navSlice = append(navSlice, *nav[k].getBest())
 				previousK = k
 			}
 			result.Navs[currentNav].Isochrones[currentIso].Paths = append(result.Navs[currentNav].Isochrones[currentIso].Paths, navSlice)
@@ -761,8 +853,8 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 				}
 				nav = d.reachers.isochrones[0]
 				for _, n := range nav {
-					now = initNow.Add(time.Duration(int(n.duration*60.0)) * time.Minute)
-					duration = n.duration
+					now = initNow.Add(time.Duration(int(n.getBest().duration*60.0)) * time.Minute)
+					duration = n.getBest().duration
 					break
 				}
 				previousDoorIsochrones = d.reachers.isochrones[1:len(d.reachers.isochrones)]
@@ -805,10 +897,10 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 	for iso := len(isochrones) - 1; iso >= 0; iso-- {
 		first := true
 		for ipt, pt := range isochrones[iso] {
-			if first || pt.distTo < minDist {
-				minDist = pt.distTo
+			if first || pt.getBest().distTo < minDist {
+				minDist = pt.getBest().distTo
 				first = false
-				last = isochrones[iso][ipt]
+				last = *isochrones[iso][ipt].getBest()
 			}
 		}
 		if !first {
@@ -837,6 +929,9 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 		sails[last.sail] += last.navDuration
 		if last.foil > 1 {
 			foils += last.navDuration
+		}
+		if last.fromAlternative {
+			fmt.Println("FROM ALTERNATIVE", last.duration)
 		}
 		result.WindLine = append(result.WindLine, WindLinePosition{
 			Lat:       last.Latlon.Lat,

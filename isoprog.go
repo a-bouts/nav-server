@@ -69,7 +69,7 @@ func BearingLine(context *Context, winds map[string][]*wind.Wind, start LatLon, 
 
 			wb, ws := wind.Interpolate(w, w1, src.Lat, src.Lon, x)
 
-			_, pos := jump(context, &Position{Latlon: start}, nil, hops[b], float64(b), wb, ws, delta, 1, nil)
+			_, pos := jump(context, &Position{Latlon: start}, nil, hops[b], float64(b), wb, ws, delta, 1, nil, false)
 
 			result[b].Line = append(result[b].Line, pos.Latlon)
 			hops[b] = pos
@@ -124,7 +124,7 @@ func TwaLine(context Context, winds map[string][]*wind.Wind, start LatLon, beari
 				bearing -= 360
 			}
 
-			_, pos := jump(&context, &Position{Latlon: start}, nil, hops[b], bearing, wb, ws, delta, 1, nil)
+			_, pos := jump(&context, &Position{Latlon: start}, nil, hops[b], bearing, wb, ws, delta, 1, nil, false)
 
 			result[b].Line = append(result[b].Line, pos.Latlon)
 			hops[b] = pos

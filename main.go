@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
+	"runtime/pprof"
 	"sync"
 	"time"
 
@@ -44,7 +46,8 @@ func Expes(w http.ResponseWriter, req *http.Request) {
 		"progressive-intervales",
 		"sqrt-dist-from",
 		"optim",
-		"max-dist"}
+		"max-dist",
+		"alternatives"}
 
 	json.NewEncoder(w).Encode(expes)
 }
@@ -55,16 +58,16 @@ func Refresh(w http.ResponseWriter, req *http.Request) {
 }
 
 func Navigate(w http.ResponseWriter, req *http.Request) {
-	// runtime.SetCPUProfileRate(300)
-	// f, err := os.Create("profile")
-	// if err != nil {
-	// 	log.Fatal("could not create CPU profile: ", err)
-	// }
-	// defer f.Close()
-	// if err := pprof.StartCPUProfile(f); err != nil {
-	// 	log.Fatal("could not start CPU profile: ", err)
-	// }
-	// defer pprof.StopCPUProfile()
+	runtime.SetCPUProfileRate(300)
+	f, err := os.Create("profile")
+	if err != nil {
+		log.Fatal("could not create CPU profile: ", err)
+	}
+	defer f.Close()
+	if err := pprof.StartCPUProfile(f); err != nil {
+		log.Fatal("could not start CPU profile: ", err)
+	}
+	defer pprof.StopCPUProfile()
 
 	//params := mux.Vars(req)
 	var gonav GoNav
