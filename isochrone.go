@@ -519,7 +519,7 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 				}
 				wg.Done()
 			}(src)
-			if cpt%75 == 0 {
+			if cpt%15 == 0 {
 				wg.Wait()
 			}
 		}
