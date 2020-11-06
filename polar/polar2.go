@@ -50,9 +50,10 @@ type Penalty struct {
 }
 
 type Sail struct {
-	Id    int         `json:"id"`
-	Name  string      `json:"name"`
-	Speed [][]float64 `json:"speed"`
+	Id     int         `json:"id"`
+	Name   string      `json:"name"`
+	Speed  [][]float64 `json:"speed"`
+	option byte
 }
 
 func Load(o Options) Boat2 {
@@ -69,6 +70,15 @@ func Load(o Options) Boat2 {
 	err = json.Unmarshal(data, &boat)
 	if err != nil {
 		fmt.Println("error:", err)
+	}
+	for _, sail := range boat.Sail {
+		if (sail.Name == "LIGHT_JIB" || sail.Name == "LIGHT_GNK") {
+			sail.option = 1
+		} else if (sail.Name == "STAYSAIL" || sail.Name == "HEAVY_GNK") {
+			sail.option = 4
+		} else if sail.Name == "CODE_0" {
+			sail.option = 2
+		}
 	}
 	return boat
 }
@@ -140,17 +150,13 @@ func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat, isInIceLim
 	maxS := byte(0)
 
 	for s, sail := range boat.Sail {
-		if (sail.Name == "LIGHT_JIB" || sail.Name == "LIGHT_GNK") && (context.Sails&1) != 1 {
-			continue
-		}
-		if (sail.Name == "STAYSAIL" || sail.Name == "HEAVY_GNK") && (context.Sails&4) != 4 {
-			continue
-		}
-		if sail.Name == "CODE_0" && (context.Sails&2) != 2 {
+		if sail.option & context.Sails != sail.option {
 			continue
 		}
 
-		bs := (sail.Speed[twaIndex0][twsIndex0]*twsFactor+sail.Speed[twaIndex0][twsIndex1]*(1-twsFactor))*twaFactor + (sail.Speed[twaIndex1][twsIndex0]*twsFactor+sail.Speed[twaIndex1][twsIndex1]*(1-twsFactor))*(1-twaFactor)
+		ti0 := sail.Speed[twaIndex0]
+		ti1 := sail.Speed[twaIndex1]
+		bs := (ti0[twsIndex0]*twsFactor+ti0[twsIndex1]*(1-twsFactor))*twaFactor + (ti1[twsIndex0]*twsFactor+ti1[twsIndex1]*(1-twsFactor))*(1-twaFactor)
 
 		if bs > maxBs {
 			maxBs = bs
