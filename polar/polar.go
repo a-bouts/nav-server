@@ -23,7 +23,7 @@ type Options struct {
 type Boat struct {
 	Foil  bool
 	Hull  bool
-	Sails int
+	Sails byte
 }
 
 func Init(o Options) Zezo {

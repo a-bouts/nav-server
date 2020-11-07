@@ -641,7 +641,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 	context := Context{
 		expes:         expes,
 		race:          race,
-		boat:          polar.Boat{Foil: foil, Hull: hull, Sails: sail},
+		boat:          polar.Boat{Foil: foil, Hull: hull, Sails: byte(sail)},
 		land:          l,
 		winds:         winds,
 		winchMalus:    winchMalus,

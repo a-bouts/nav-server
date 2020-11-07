@@ -146,11 +146,11 @@ func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat, isInIceLim
 	twsIndex0, twsIndex1, twsFactor := interpolationIndex(boat.Tws, ws)
 	twaIndex0, twaIndex1, twaFactor := interpolationIndex(boat.Twa, t)
 
-	maxBs := 0.0
-	maxS := byte(0)
+	var maxBs float64
+	var maxS byte
 
 	for s, sail := range boat.Sail {
-		if sail.option & byte(context.Sails) != sail.option {
+		if sail.option & context.Sails != sail.option {
 			continue
 		}
 
