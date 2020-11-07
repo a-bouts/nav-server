@@ -58,7 +58,7 @@ func Refresh(w http.ResponseWriter, req *http.Request) {
 }
 
 func Navigate(w http.ResponseWriter, req *http.Request) {
-	runtime.SetCPUProfileRate(300)
+	//runtime.SetCPUProfileRate(300)
 	f, err := os.Create("profile")
 	if err != nil {
 		log.Fatal("could not create CPU profile: ", err)
