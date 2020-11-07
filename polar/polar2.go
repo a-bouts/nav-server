@@ -149,7 +149,9 @@ func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat, isInIceLim
 	var maxBs float64
 	var maxS byte
 
-	for s, sail := range boat.Sail {
+	for s := 0 ; s < len(boat.Sail) ; s++ {
+		sail := &boat.Sail[s]
+
 		if sail.option & context.Sails != sail.option {
 			continue
 		}
