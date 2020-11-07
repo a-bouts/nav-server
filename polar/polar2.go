@@ -72,9 +72,9 @@ func Load(o Options) Boat2 {
 		fmt.Println("error:", err)
 	}
 	for _, sail := range boat.Sail {
-		if (sail.Name == "LIGHT_JIB" || sail.Name == "LIGHT_GNK") {
+		if sail.Name == "LIGHT_JIB" || sail.Name == "LIGHT_GNK" {
 			sail.option = 1
-		} else if (sail.Name == "STAYSAIL" || sail.Name == "HEAVY_GNK") {
+		} else if sail.Name == "STAYSAIL" || sail.Name == "HEAVY_GNK" {
 			sail.option = 4
 		} else if sail.Name == "CODE_0" {
 			sail.option = 2
@@ -145,20 +145,23 @@ func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat, isInIceLim
 
 	twsIndex0, twsIndex1, twsFactor := interpolationIndex(boat.Tws, ws)
 	twaIndex0, twaIndex1, twaFactor := interpolationIndex(boat.Twa, t)
+	unMoinsTwsFactor1 := 1 - twsFactor
+	unMoinsTwaFactor1 := 1 - twaFactor
 
 	var maxBs float64
 	var maxS byte
 
-	for s := 0 ; s < len(boat.Sail) ; s++ {
-		sail := &boat.Sail[s]
+	l := len(boat.Sail)
+	for s := 0; s < l; s++ {
 
-		if sail.option & context.Sails != sail.option {
+		sail := &boat.Sail[s]
+		if sail.option&context.Sails != sail.option {
 			continue
 		}
 
 		ti0 := sail.Speed[twaIndex0]
 		ti1 := sail.Speed[twaIndex1]
-		bs := (ti0[twsIndex0]*twsFactor+ti0[twsIndex1]*(1-twsFactor))*twaFactor + (ti1[twsIndex0]*twsFactor+ti1[twsIndex1]*(1-twsFactor))*(1-twaFactor)
+		bs := (ti0[twsIndex0]*twsFactor+ti0[twsIndex1]*(unMoinsTwsFactor1))*twaFactor + (ti1[twsIndex0]*twsFactor+ti1[twsIndex1]*(unMoinsTwsFactor1))*(unMoinsTwaFactor1)
 
 		if bs > maxBs {
 			maxBs = bs

@@ -23,7 +23,7 @@ func GetBoatLines(expes map[string]bool, winds map[string][]*wind.Wind, start La
 	var z polar.Polar
 	z = polar.Init(polar.Options{Race: race.Polars, Sail: sail})
 
-	if context.isExpes("new-polars") {
+	if context.newPolars {
 		fmt.Println("Load new polars")
 		z = polar.Load(polar.Options{Race: race.Boat, Sail: sail})
 	}

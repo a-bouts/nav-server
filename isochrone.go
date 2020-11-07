@@ -25,6 +25,13 @@ type Context struct {
 	LatLonSpherical
 	maxDistFactor float64
 	delta         float64
+
+	newPolars             bool
+	progressiveIntervales bool
+	sqrtFromDist          bool
+	optim                 bool
+	maxDist               bool
+	alternatives          bool
 }
 
 type Isochrone struct {
@@ -201,7 +208,7 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 	to := context.Destination(src.Latlon, float64(b), dist)
 
 	fullDist, az := 0.0, 0.0
-	if context.isExpes("sqrt-dist-from") {
+	if context.sqrtFromDist {
 		fullDist, az = cartesian.DistanceAndBearingTo(start.Latlon, to)
 	} else {
 		fullDist, az = context.DistanceAndBearingTo(start.Latlon, to)
@@ -227,7 +234,7 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 		fromAlternative:  isAlternative}
 
 	if buoy != nil {
-		if context.isExpes("sqrt-dist-from") {
+		if context.sqrtFromDist {
 			res.distTo = cartesian.DistanceTo(to, buoy.destination())
 		} else {
 			res.distTo = context.DistanceTo(to, buoy.destination())
@@ -276,7 +283,7 @@ func doorReached(context *Context, start *Position, src *Position, buoy Buoy, wb
 		latlon := buoy.destination()
 
 		fullDist, az := 0.0, 0.0
-		if context.isExpes("sqrt-dist-from") {
+		if context.sqrtFromDist {
 			fullDist, az = cartesian.DistanceAndBearingTo(start.Latlon, latlon)
 		} else {
 			fullDist, az = context.DistanceAndBearingTo(start.Latlon, latlon)
@@ -337,7 +344,7 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 
 	bMin := 0
 	bMax := 360
-	if context.isExpes("optim") {
+	if context.optim {
 		if start.fromDist > 0.0 {
 			bMin = start.bearing - 120
 			if bMin < 0 {
@@ -462,7 +469,7 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 
 	w, w1, x := findWinds(context.winds, now)
 
-	expeAlternatives := context.isExpes("alternatives")
+	expeAlternatives := context.alternatives
 	for _, alt := range previous_isochrone {
 		for a, src := range alt.alternatives {
 			if !expeAlternatives && a != alt.best || src == nil {
@@ -519,9 +526,9 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 				}
 				wg.Done()
 			}(src)
-			if cpt%15 == 0 {
-				wg.Wait()
-			}
+			// if cpt%15 == 0 {
+			// 	wg.Wait()
+			// }
 		}
 	}
 	wg.Wait()
@@ -557,7 +564,7 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 				toRemove = append(toRemove, az)
 			} else {
 				maxDistFactor := context.maxDistFactor
-				if context.isExpes("max-dist") {
+				if context.maxDist {
 					maxDistFactor = 1.2
 					refDist := math.Min(dst.fromDist, dst.distTo)
 					if refDist/1000.0 < 100.0 {
@@ -648,10 +655,17 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 		maxDistFactor: 1.5,
 		delta:         delta}
 
+	context.newPolars = context.isExpes("new-polars")
+	context.progressiveIntervales = context.isExpes("progressive-intervales")
+	context.sqrtFromDist = context.isExpes("sqrt-from-dist")
+	context.optim = context.isExpes("optim")
+	context.maxDist = context.isExpes("max-dist")
+	context.alternatives = context.isExpes("alternatives")
+
 	var z polar.Polar
 	z = polar.Init(polar.Options{Race: race.Polars, Sail: sail})
 
-	if context.isExpes("new-polars") {
+	if context.newPolars {
 		fmt.Println("Load new polars")
 		z = polar.Load(polar.Options{Race: race.Boat, Sail: sail})
 	}
@@ -686,7 +700,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 		context.maxDistFactor = 2.0
 	}
 
-	if context.isExpes("sqrt-dist-from") {
+	if context.sqrtFromDist {
 		dist = cartesian.DistanceTo(start, buoy.destination())
 	}
 
@@ -730,7 +744,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 	mustStop := false
 	for ok := true; ok; ok = duration < maxDuration && len(buoys) > 0 && !mustStop {
 		d := delta
-		if context.isExpes("progressive-intervales") {
+		if context.progressiveIntervales {
 
 			ks := make([]int, len(deltas))
 			kj := 0
@@ -864,7 +878,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 			if len(buoys) > 0 {
 				pos = newPos(buoy.departure())
 				buoy = buoys[0]
-				if context.isExpes("sqrt-dist-from") {
+				if context.sqrtFromDist {
 					dist = cartesian.DistanceTo(pos.Latlon, buoy.destination())
 				} else {
 					dist = context.DistanceTo(pos.Latlon, buoy.destination())
