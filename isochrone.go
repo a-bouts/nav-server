@@ -492,9 +492,9 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 							_, exists := isochrone[b]
 							if !exists || len(isochrone) > 1 {
 								isochrone = make(map[int]*Alternative)
+								exists = false
 							}
 							if !exists || isochrone[b].getBest().duration > wayDuration {
-								fmt.Println("Grrrrr", isochrone[b].best, isochrone[b].getBest())
 								isochrone[b] = dst
 								minWayDuration = wayDuration
 							}
