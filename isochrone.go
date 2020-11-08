@@ -513,12 +513,15 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 							lock.Unlock()
 						} else {
 							lock.Lock()
-							for a, alt := range dst.alternatives {
-								if alt != nil && (prev.alternatives[a] == nil || prev.alternatives[a].fromDist < alt.fromDist) {
-									prev.alternatives[a] = alt
+							if context.alternatives {
+								for a, alt := range dst.alternatives {
+									if alt != nil && (prev.alternatives[a] == nil || prev.alternatives[a].fromDist < alt.fromDist) {
+										prev.alternatives[a] = alt
+									}
 								}
 							}
-							if prev.alternatives[prev.best].fromDist < dst.alternatives[dst.best].fromDist {
+							if prev.getBest().fromDist < dst.getBest().fromDist {
+								prev.alternatives[dst.best] = dst.getBest()
 								prev.best = dst.best
 							}
 							lock.Unlock()
