@@ -589,7 +589,7 @@ func findWinds(winds map[string][]*wind.Wind, m time.Time) ([]*wind.Wind, []*win
 	return winds[keys[len(keys)-1]], nil, 0
 }
 
-func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bearing int, currentSail byte, race Race, delta float64, deltas map[int]float64, maxDuration float64, delay int, sail int, foil bool, hull bool, winchMalus float64, stop bool, positionPool *sync.Pool) Navs {
+func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bearing int, currentSail byte, race Race, delta float64, deltas map[int]float64, maxDuration float64, delay int, sail int, foil bool, hull bool, winchMalus float64, stop bool) Navs {
 
 	context := Context{
 		expes:         expes,

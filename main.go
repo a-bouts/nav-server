@@ -88,7 +88,7 @@ func Navigate(w http.ResponseWriter, req *http.Request) {
 		120:  3.0,
 		9999: 6.0}
 
-	isos := Run(gonav.Expes, &l, winds, &x, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, deltas, gonav.MaxDuration, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, gonav.Stop, positionPool)
+	isos := Run(gonav.Expes, &l, winds, &x, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, deltas, gonav.MaxDuration, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, gonav.Stop)
 
 	delta := time.Now().Sub(start)
 	fmt.Println("Navigation", delta)
@@ -125,8 +125,6 @@ var l Land
 var winds map[string][]*wind.Wind
 var x xmpp.Xmpp
 var lock = sync.RWMutex{}
-
-var positionPool *sync.Pool
 
 func LoadWinds() {
 	fmt.Println("Load winds")
@@ -166,12 +164,6 @@ func main() {
 	flag.Parse()
 
 	x = xmpp.Xmpp{Config: xmpp.Config{Host: *xmppHost, Jid: *xmppJid, Password: *xmppPassword, To: *xmppTo}}
-
-	positionPool = &sync.Pool{
-		New: func() interface{} {
-			return new(Position)
-		},
-	}
 
 	fmt.Println("Load lands")
 	l = InitLand()
