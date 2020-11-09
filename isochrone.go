@@ -233,6 +233,10 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 
 	to := context.Destination(src.Latlon, float64(b), dist)
 
+	if context.land != nil && context.land.IsLand(to.Lat, to.Lon) {
+		return 0, nil
+	}
+
 	fullDist, az := 0.0, 0.0
 	if context.sqrtFromDist {
 		fullDist, az = cartesian.DistanceAndBearingTo(start.Latlon, to)
