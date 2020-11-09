@@ -74,10 +74,9 @@ func Navigate(w http.ResponseWriter, req *http.Request) {
 
 	deltas := map[int]float64{
 		6:    1.0 / 6.0,
-		12:   0.25,
-		24:   0.5,
-		72:   1.0,
-		120:  3.0,
+		12:   0.5,
+		48:   1.0,
+		72:   3.0,
 		9999: 6.0}
 
 	isos := Run(gonav.Expes, &l, winds, &x, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, deltas, gonav.MaxDuration, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, gonav.Stop, positionPool)

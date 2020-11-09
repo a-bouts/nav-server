@@ -611,7 +611,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 		positionPool:  positionPool,
 	}
 
-	if delta <= 0 {
+	if delta <= 1 {
 		context.expes["progressive-intervales"] = true
 		context.delta = 3
 	}
