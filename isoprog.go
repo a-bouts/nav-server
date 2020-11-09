@@ -14,17 +14,13 @@ type BoatLine struct {
 	Line []LatLon `json:"line"`
 }
 
-func GetBoatLines(expes map[string]bool, winds map[string][]*wind.Wind, start LatLon, bearing int, currentSail byte, race Race, delta float64, delay int, sail int, foil bool, hull bool, winchMalus float64) []map[int](*BoatLine) {
+func GetBoatLines(expes map[string]bool, winds map[string][]*wind.Wind, start LatLon, bearing int, currentSail byte, race Race, delta float64, delay int, sail int, foil bool, hull bool, winchMalus float64, positionPool sync.Pool) []map[int](*BoatLine) {
 
 	context := Context{
-		expes:      expes,
-		boat:       polar.Boat{Foil: foil, Hull: hull},
-		winchMalus: winchMalus,
-		positionPool: sync.Pool{
-			New: func() interface{} {
-				return new(Position)
-			},
-		}}
+		expes:        expes,
+		boat:         polar.Boat{Foil: foil, Hull: hull},
+		winchMalus:   winchMalus,
+		positionPool: positionPool}
 
 	var z polar.Polar
 	z = polar.Init(polar.Options{Race: race.Polars, Sail: sail})

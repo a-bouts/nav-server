@@ -55,16 +55,9 @@ func Refresh(w http.ResponseWriter, req *http.Request) {
 }
 
 func Navigate(w http.ResponseWriter, req *http.Request) {
-	// runtime.SetCPUProfileRate(300)
-	// f, err := os.Create("profile")
-	// if err != nil {
-	// 	log.Fatal("could not create CPU profile: ", err)
-	// }
-	// defer f.Close()
-	// if err := pprof.StartCPUProfile(f); err != nil {
-	// 	log.Fatal("could not start CPU profile: ", err)
-	// }
-	// defer pprof.StopCPUProfile()
+	//runtime.SetCPUProfileRate(300)
+	//defer profile.Start().Stop()
+	//defer profile.Start(profile.MemProfile).Stop()
 
 	//params := mux.Vars(req)
 	var gonav GoNav
@@ -106,7 +99,7 @@ func BoatLines(w http.ResponseWriter, req *http.Request) {
 
 	start := time.Now()
 
-	lines := GetBoatLines(gonav.Expes, winds, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus)
+	lines := GetBoatLines(gonav.Expes, winds, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, positionPool)
 
 	delta := time.Now().Sub(start)
 	fmt.Println("Boatlines", delta)

@@ -11,5 +11,6 @@ require (
 	github.com/mattn/go-xmpp v0.0.0-20200309091041-899ef71e80d2
 	github.com/nilsmagnus/grib v1.2.6
 	github.com/peterbourgon/ff v1.7.0
+	github.com/pkg/profile v1.5.0
 	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae // indirect
 )

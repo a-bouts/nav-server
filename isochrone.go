@@ -94,6 +94,13 @@ type IsLand struct {
 	IsLand bool `json:"island"`
 }
 
+func (context *Context) newPos() *Position {
+	// return new(Position)
+	pos := context.positionPool.Get().(*Position)
+	pos.clear()
+	return pos
+}
+
 func (pos *Position) clear() {
 	pos.az = 0
 	pos.fromDist = 0
@@ -213,6 +220,9 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 	}
 
 	to := context.Destination(src.Latlon, float64(b), dist)
+	if context.land != nil && context.land.IsLand(to.Lat, to.Lon) {
+		return 0, nil
+	}
 
 	fullDist, az := 0.0, 0.0
 	if context.isExpes("sqrt-dist-from") {
@@ -221,8 +231,7 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 		fullDist, az = context.DistanceAndBearingTo(start.Latlon, to)
 	}
 
-	res := context.positionPool.Get().(*Position)
-	res.clear()
+	res := context.newPos()
 	res.Latlon = to
 	res.az = int(math.Round(az * factor))
 	res.fromDist = fullDist
@@ -295,8 +304,7 @@ func doorReached(context *Context, start *Position, src *Position, buoy Buoy, wb
 		} else {
 			fullDist, az = context.DistanceAndBearingTo(start.Latlon, latlon)
 		}
-		res := context.positionPool.Get().(*Position)
-		res.clear()
+		res := context.newPos()
 		res.Latlon = latlon
 		res.az = int(math.Round(az * factor))
 		res.fromDist = fullDist
@@ -510,7 +518,7 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 				buoy.reach(context, dst.previousWindLine)
 			}
 			d, e := max[az]
-			if e && d > dst.fromDist {
+			if e && d*1.001 > dst.fromDist {
 				nbLtMax++
 				toRemove = append(toRemove, az)
 			} else {
@@ -650,8 +658,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 		dist = cartesian.DistanceTo(start, buoy.destination())
 	}
 
-	pos := context.positionPool.Get().(*Position)
-	pos.clear()
+	pos := context.newPos()
 	pos.Latlon = start
 	pos.az = int(float64(bearing) * buoy.getFactor())
 	pos.bearing = bearing
