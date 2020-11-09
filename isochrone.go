@@ -25,6 +25,7 @@ type Context struct {
 	LatLonSpherical
 	maxDistFactor float64
 	delta         float64
+	positionPool  sync.Pool
 }
 
 type Isochrone struct {
@@ -91,6 +92,28 @@ type WindLinePosition struct {
 
 type IsLand struct {
 	IsLand bool `json:"island"`
+}
+
+func (pos *Position) clear() {
+	pos.az = 0
+	pos.fromDist = 0
+	pos.bearing = 0
+	pos.twa = 0
+	pos.wind = 0
+	pos.windSpeed = 0
+	pos.boatSpeed = 0
+	pos.sail = 0
+	pos.foil = 0
+	pos.distTo = 0
+	pos.previousWindLine = nil
+	pos.duration = 0
+	pos.navDuration = 0
+	pos.isLand = false
+	pos.bonus = 0
+	pos.change = false
+	pos.reached = false
+	pos.doorReached = ""
+	pos.isInIceLimits = false
 }
 
 func (context *Context) isExpes(expe string) bool {
@@ -198,23 +221,24 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 		fullDist, az = context.DistanceAndBearingTo(start.Latlon, to)
 	}
 
-	res := Position{
-		Latlon:           to,
-		az:               int(math.Round(az * factor)),
-		fromDist:         fullDist,
-		bearing:          bearing,
-		twa:              twa,
-		wind:             wb,
-		windSpeed:        ws * 1.943844,
-		boatSpeed:        boatSpeed,
-		sail:             sail,
-		foil:             isFoil,
-		isInIceLimits:    context.race.IceLimits.isInIceLimits(&to),
-		bonus:            bonus,
-		duration:         d + src.duration,
-		navDuration:      d,
-		previousWindLine: src,
-		change:           change}
+	res := context.positionPool.Get().(*Position)
+	res.clear()
+	res.Latlon = to
+	res.az = int(math.Round(az * factor))
+	res.fromDist = fullDist
+	res.bearing = bearing
+	res.twa = twa
+	res.wind = wb
+	res.windSpeed = ws * 1.943844
+	res.boatSpeed = boatSpeed
+	res.sail = sail
+	res.foil = isFoil
+	res.isInIceLimits = context.race.IceLimits.isInIceLimits(&to)
+	res.bonus = bonus
+	res.duration = d + src.duration
+	res.navDuration = d
+	res.previousWindLine = src
+	res.change = change
 
 	if buoy != nil {
 		if context.isExpes("sqrt-dist-from") {
@@ -226,7 +250,7 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 			*min = res.distTo
 		}
 	}
-	return res.az, &res
+	return res.az, res
 }
 
 func doorReached(context *Context, start *Position, src *Position, buoy Buoy, wb float64, ws float64, duration float64, factor float64) (bool, float64, *Position) {
@@ -271,31 +295,32 @@ func doorReached(context *Context, start *Position, src *Position, buoy Buoy, wb
 		} else {
 			fullDist, az = context.DistanceAndBearingTo(start.Latlon, latlon)
 		}
-		res := Position{
-			Latlon:           latlon,
-			az:               int(math.Round(az * factor)),
-			fromDist:         fullDist,
-			bearing:          int(math.Round(az12)),
-			twa:              twa,
-			wind:             wb,
-			windSpeed:        ws * 1.943844,
-			boatSpeed:        boatSpeed,
-			sail:             sail,
-			foil:             isFoil,
-			isInIceLimits:    context.race.IceLimits.isInIceLimits(&latlon),
-			bonus:            0,
-			distTo:           0,
-			duration:         durationToWaypoint + src.duration,
-			navDuration:      durationToWaypoint,
-			previousWindLine: src,
-			change:           change}
+		res := context.positionPool.Get().(*Position)
+		res.clear()
+		res.Latlon = latlon
+		res.az = int(math.Round(az * factor))
+		res.fromDist = fullDist
+		res.bearing = int(math.Round(az12))
+		res.twa = twa
+		res.wind = wb
+		res.windSpeed = ws * 1.943844
+		res.boatSpeed = boatSpeed
+		res.sail = sail
+		res.foil = isFoil
+		res.isInIceLimits = context.race.IceLimits.isInIceLimits(&latlon)
+		res.bonus = 0
+		res.distTo = 0
+		res.duration = durationToWaypoint + src.duration
+		res.navDuration = durationToWaypoint
+		res.previousWindLine = src
+		res.change = change
 
-		return true, durationToWaypoint, &res
+		return true, durationToWaypoint, res
 	}
 	return false, 0, nil
 }
 
-func way(context *Context, start *Position, src *Position, wb float64, ws float64, duration float64, buoy Buoy, isochrone map[int]Position, factor float64, min *float64) (map[int](*Position), bool, float64) {
+func way(context *Context, start *Position, src *Position, wb float64, ws float64, duration float64, buoy Buoy, isochrone map[int]*Position, factor float64, min *float64) (map[int](*Position), bool, float64) {
 	result := make(map[int](*Position))
 
 	reached, dur, point := doorReached(context, start, src, buoy, wb, ws, duration, factor)
@@ -326,6 +351,8 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 				prev, exists := result[az]
 				if !exists || prev.fromDist < to.fromDist {
 					result[az] = to
+				} else {
+					context.positionPool.Put(to)
 				}
 			}
 		}
@@ -336,6 +363,8 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 				prev, exists := result[az]
 				if !exists || prev.fromDist < to.fromDist {
 					result[az] = to
+				} else {
+					context.positionPool.Put(to)
 				}
 			}
 		}
@@ -345,6 +374,8 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 				prev, exists := result[az]
 				if !exists || prev.fromDist < to.fromDist {
 					result[az] = to
+				} else {
+					context.positionPool.Put(to)
 				}
 			}
 		}
@@ -396,7 +427,7 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 	return result, false, duration
 }
 
-func navigate(context *Context, now time.Time, factor float64, max map[int]float64, min *float64, start *Position, previous_isochrone map[int]Position, isochrone map[int]Position, buoy Buoy, duration float64) (map[int]Position, bool, float64) {
+func navigate(context *Context, now time.Time, factor float64, max map[int]float64, min *float64, start *Position, previous_isochrone map[int]*Position, isochrone map[int]*Position, buoy Buoy, duration float64) (map[int]*Position, bool, float64) {
 	reached := false
 	var lock = sync.RWMutex{}
 
@@ -410,22 +441,24 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 		cpt++
 		wg.Add(1)
 
-		go func(src Position) {
+		go func(src *Position) {
 
 			wb, ws := wind.Interpolate(w, w1, src.Latlon.Lat, src.Latlon.Lon, x)
 
-			way, reachedByWay, wayDuration := way(context, start, &src, wb, ws, duration, buoy, isochrone, factor, min)
+			way, reachedByWay, wayDuration := way(context, start, src, wb, ws, duration, buoy, isochrone, factor, min)
 			if reachedByWay {
 				if buoy.buoyType() == "WAYPOINT" {
 					for b, dst := range way {
 						lock.Lock()
 						_, exists := isochrone[b]
 						if !exists || len(isochrone) > 1 {
-							isochrone = make(map[int]Position)
+							isochrone = make(map[int]*Position)
 						}
 						if !exists || isochrone[b].duration > wayDuration {
-							isochrone[b] = *dst
+							isochrone[b] = dst
 							minWayDuration = wayDuration
+						} else {
+							context.positionPool.Put(dst)
 						}
 						lock.Unlock()
 					}
@@ -438,8 +471,10 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 					lock.RUnlock()
 					if !exists || prev.fromDist < dst.fromDist {
 						lock.Lock()
-						isochrone[az] = *dst
+						isochrone[az] = dst
 						lock.Unlock()
+					} else {
+						context.positionPool.Put(dst)
 					}
 				}
 			}
@@ -459,7 +494,7 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 		nbFarFromMin := 0
 		for az, dst := range isochrone {
 			parentReached := false
-			p := &dst
+			p := dst
 			for i := 0; i < 10; i++ {
 				p = p.previousWindLine
 				if p == nil {
@@ -512,6 +547,7 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 			fmt.Println("Remove", nbLtMax, "< Max, ", nbToAvoid, "to avoid, ", nbLand, "landi, ", nbFar, "far from way, ", nbFarFromMin, "far from min")
 		}
 		for _, az := range toRemove {
+			context.positionPool.Put(isochrone[az])
 			delete(isochrone, az)
 		}
 	}
@@ -553,7 +589,7 @@ func findWinds(winds map[string][]*wind.Wind, m time.Time) ([]*wind.Wind, []*win
 	return winds[keys[len(keys)-1]], nil, 0
 }
 
-func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bearing int, currentSail byte, race Race, delta float64, deltas map[int]float64, maxDuration float64, delay int, sail int, foil bool, hull bool, winchMalus float64, stop bool) Navs {
+func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bearing int, currentSail byte, race Race, delta float64, deltas map[int]float64, maxDuration float64, delay int, sail int, foil bool, hull bool, winchMalus float64, stop bool, positionPool *sync.Pool) Navs {
 
 	context := Context{
 		expes:         expes,
@@ -563,7 +599,17 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 		winds:         winds,
 		winchMalus:    winchMalus,
 		maxDistFactor: 1.5,
-		delta:         delta}
+		delta:         delta,
+		positionPool: sync.Pool{
+			New: func() interface{} {
+				return new(Position)
+			},
+		}}
+
+	if delta <= 0 {
+		context.expes["progressive-intervales"] = true
+		context.delta = 3
+	}
 
 	var z polar.Polar
 	z = polar.Init(polar.Options{Race: race.Polars, Sail: sail})
@@ -591,7 +637,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 	}
 	w, w1, x := findWinds(winds, now)
 
-	nav := make(map[int]Position)
+	nav := make(map[int]*Position)
 	reached := false
 	navDuration := 0.0
 
@@ -607,15 +653,13 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 		dist = cartesian.DistanceTo(start, buoy.destination())
 	}
 
-	pos := &Position{
-		Latlon:      start,
-		az:          int(float64(bearing) * buoy.getFactor()),
-		bearing:     bearing,
-		sail:        currentSail,
-		distTo:      dist,
-		fromDist:    0.0,
-		duration:    0.0,
-		navDuration: 0.0} //float64(delay)}
+	pos := context.positionPool.Get().(*Position)
+	pos.clear()
+	pos.Latlon = start
+	pos.az = int(float64(bearing) * buoy.getFactor())
+	pos.bearing = bearing
+	pos.sail = currentSail
+	pos.distTo = dist
 
 	wb, _ := wind.Interpolate(w, w1, pos.Latlon.Lat, pos.Latlon.Lon, x)
 	pos.twa = float64(bearing) - wb
@@ -625,7 +669,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 	if pos.twa > 180 {
 		pos.twa = pos.twa - 360
 	}
-	nav[pos.az] = *pos
+	nav[pos.az] = pos
 
 	max := make(map[int]float64, int(float64(360)*buoy.getFactor()))
 	maxMax := 0.0
@@ -635,18 +679,18 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 		Navs: make([]Nav, 0, 1)}
 	currentNav := 0
 	currentIso := 0
-	result.Navs = append(result.Navs, Nav{buoy.name(), make([]Isochrone, 0, int(maxDuration/delta))})
+	result.Navs = append(result.Navs, Nav{buoy.name(), make([]Isochrone, 0, int(maxDuration/context.delta))})
 	result.Navs[currentNav].Isochrones = append(result.Navs[currentNav].Isochrones, Isochrone{"ff0000", [][]Position{[]Position{*pos}}})
 
 	success := true
 
-	var previousDoorIsochrones []map[int]Position
+	var previousDoorIsochrones []map[int]*Position
 	var previousDoorFactor float64
 
-	isochrones := make([]map[int]Position, 0, int(maxDuration/delta))
+	isochrones := make([]map[int]*Position, 0, int(maxDuration/context.delta))
 	mustStop := false
 	for ok := true; ok; ok = duration < maxDuration && len(buoys) > 0 && !mustStop {
-		d := delta
+		d := context.delta
 		if context.isExpes("progressive-intervales") {
 
 			ks := make([]int, len(deltas))
@@ -677,7 +721,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 			}
 		}
 
-		nextIsochrone := make(map[int]Position)
+		nextIsochrone := make(map[int]*Position)
 		if len(previousDoorIsochrones) > 0 {
 			for _, p := range previousDoorIsochrones[0] {
 				if p.duration <= duration+d {
@@ -717,7 +761,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 			} else if r6 < navDuration {
 				color = "#fccc8d"
 			}
-			result.Navs[currentNav].Isochrones = append(result.Navs[currentNav].Isochrones, Isochrone{color, make([][]Position, 0, int(maxDuration/delta))})
+			result.Navs[currentNav].Isochrones = append(result.Navs[currentNav].Isochrones, Isochrone{color, make([][]Position, 0, int(maxDuration/context.delta))})
 			currentIso = currentIso + 1
 
 			var navSlice []Position
@@ -730,7 +774,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 					navSlice = make([]Position, 0, len(nav))
 				}
 				//		fmt.Println(int(duration), k, nav[k])
-				navSlice = append(navSlice, nav[k])
+				navSlice = append(navSlice, *nav[k])
 				previousK = k
 			}
 			result.Navs[currentNav].Isochrones[currentIso].Paths = append(result.Navs[currentNav].Isochrones[currentIso].Paths, navSlice)
@@ -782,14 +826,14 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 
 				max = make(map[int]float64, 360*int(buoy.getFactor()))
 				// previousFactor = 1
-				result.Navs = append(result.Navs, Nav{buoy.name(), make([]Isochrone, 0, int(maxDuration/delta))})
+				result.Navs = append(result.Navs, Nav{buoy.name(), make([]Isochrone, 0, int(maxDuration/context.delta))})
 				currentNav++
 				currentIso = -1
 			}
 		}
 	}
 
-	var last Position
+	var last *Position
 	var minDist float64
 
 	sails := make(map[byte]float64, 7)
@@ -817,7 +861,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 	}
 
 	next := last
-	result.WindLine = make([]WindLinePosition, 0, int(maxDuration/delta))
+	result.WindLine = make([]WindLinePosition, 0, int(maxDuration/context.delta))
 	result.WindLine = append(result.WindLine, WindLinePosition{
 		Lat:       last.Latlon.Lat,
 		Lon:       last.Latlon.Lon,
@@ -833,7 +877,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 		foils += last.navDuration
 	}
 	for ok := last.previousWindLine != nil; ok; ok = last.previousWindLine != nil {
-		last = *last.previousWindLine
+		last = last.previousWindLine
 		sails[last.sail] += last.navDuration
 		if last.foil > 1 {
 			foils += last.navDuration

@@ -17,7 +17,7 @@ type Door struct {
 }
 
 type Reachers struct {
-	isochrones []map[int]Position
+	isochrones []map[int]*Position
 }
 
 type Waypoint struct {
@@ -173,27 +173,27 @@ func (d *Door) reach(context *Context, pos *Position) {
 
 	dist, az := context.DistanceAndBearingTo(d.departure(), pos.Latlon)
 
-	var last map[int]Position
+	var last map[int]*Position
 
 	if len(d.reachers.isochrones) > 0 {
 		last = d.reachers.isochrones[len(d.reachers.isochrones)-1]
 
 		for _, v := range last {
 			if v.duration != pos.duration {
-				last = make(map[int]Position)
+				last = make(map[int]*Position)
 				d.reachers.isochrones = append(d.reachers.isochrones, last)
 			}
 			break
 		}
 	} else {
-		last = make(map[int]Position)
+		last = make(map[int]*Position)
 		d.reachers.isochrones = append(d.reachers.isochrones, last)
 	}
 
 	a := int(math.Round(az * d.getFactor()))
 	_, found := last[a]
 	if !found || last[a].fromDist < dist {
-		last[a] = Position{
+		last[a] = &Position{
 			Latlon:           pos.Latlon,
 			az:               a,
 			fromDist:         dist,

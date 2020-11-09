@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime/pprof"
 	"sync"
 	"time"
 
@@ -56,15 +57,15 @@ func Refresh(w http.ResponseWriter, req *http.Request) {
 
 func Navigate(w http.ResponseWriter, req *http.Request) {
 	// runtime.SetCPUProfileRate(300)
-	// f, err := os.Create("profile")
-	// if err != nil {
-	// 	log.Fatal("could not create CPU profile: ", err)
-	// }
-	// defer f.Close()
-	// if err := pprof.StartCPUProfile(f); err != nil {
-	// 	log.Fatal("could not start CPU profile: ", err)
-	// }
-	// defer pprof.StopCPUProfile()
+	f, err := os.Create("profile")
+	if err != nil {
+		log.Fatal("could not create CPU profile: ", err)
+	}
+	defer f.Close()
+	if err := pprof.StartCPUProfile(f); err != nil {
+		log.Fatal("could not start CPU profile: ", err)
+	}
+	defer pprof.StopCPUProfile()
 
 	//params := mux.Vars(req)
 	var gonav GoNav
@@ -87,7 +88,7 @@ func Navigate(w http.ResponseWriter, req *http.Request) {
 		120:  3.0,
 		9999: 6.0}
 
-	isos := Run(gonav.Expes, &l, winds, &x, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, deltas, gonav.MaxDuration, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, gonav.Stop)
+	isos := Run(gonav.Expes, &l, winds, &x, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, deltas, gonav.MaxDuration, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, gonav.Stop, positionPool)
 
 	delta := time.Now().Sub(start)
 	fmt.Println("Navigation", delta)
@@ -124,6 +125,8 @@ var l Land
 var winds map[string][]*wind.Wind
 var x xmpp.Xmpp
 var lock = sync.RWMutex{}
+
+var positionPool *sync.Pool
 
 func LoadWinds() {
 	fmt.Println("Load winds")
@@ -163,6 +166,12 @@ func main() {
 	flag.Parse()
 
 	x = xmpp.Xmpp{Config: xmpp.Config{Host: *xmppHost, Jid: *xmppJid, Password: *xmppPassword, To: *xmppTo}}
+
+	positionPool = &sync.Pool{
+		New: func() interface{} {
+			return new(Position)
+		},
+	}
 
 	fmt.Println("Load lands")
 	l = InitLand()
