@@ -189,11 +189,11 @@ func main() {
 	fmt.Println("Start server")
 
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/nav/run", Navigate).Methods("POST")
-	router.HandleFunc("/nav/refresh", Refresh).Methods("GET")
-	router.HandleFunc("/nav/expes", Expes).Methods("GET")
-	router.HandleFunc("/nav/test", TestLand).Methods("POST")
-	router.HandleFunc("/nav/boatlines", BoatLines).Methods("POST")
+	router.HandleFunc("/private/nav/run", Navigate).Methods("POST")
+	router.HandleFunc("/private/nav/refresh", Refresh).Methods("GET")
+	router.HandleFunc("/private/nav/expes", Expes).Methods("GET")
+	router.HandleFunc("/private/nav/test", TestLand).Methods("POST")
+	router.HandleFunc("/private/nav/boatlines", BoatLines).Methods("POST")
 	log.Fatal(http.ListenAndServe(":8888", router))
 
 }

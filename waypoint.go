@@ -196,24 +196,27 @@ func (d *Door) reach(context *Context, alt *Alternative) {
 	if !found || last[a].getBest().fromDist < dist {
 		last[a] = &Alternative{
 			best: alt.best}
-		last[a].alternatives[alt.best] = &Position{
-			Latlon:           pos.Latlon,
-			az:               a,
-			fromDist:         dist,
-			bearing:          pos.bearing,
-			twa:              pos.twa,
-			wind:             pos.wind,
-			windSpeed:        pos.windSpeed,
-			boatSpeed:        pos.boatSpeed,
-			sail:             pos.sail,
-			foil:             pos.foil,
-			distTo:           0,
-			previousWindLine: pos.previousWindLine,
-			duration:         pos.duration,
-			navDuration:      pos.navDuration,
-			isLand:           pos.isLand,
-			bonus:            pos.bonus,
-			change:           pos.change,
-			reached:          false}
+		p := context.positionPool.Get().(*Position)
+		p.clear()
+
+		last[a].alternatives[alt.best] = p
+		p.Latlon = pos.Latlon
+		p.az = a
+		p.fromDist = dist
+		p.bearing = pos.bearing
+		p.twa = pos.twa
+		p.wind = pos.wind
+		p.windSpeed = pos.windSpeed
+		p.boatSpeed = pos.boatSpeed
+		p.sail = pos.sail
+		p.foil = pos.foil
+		p.distTo = 0
+		p.previousWindLine = pos.previousWindLine
+		p.duration = pos.duration
+		p.navDuration = pos.navDuration
+		p.isLand = pos.isLand
+		p.bonus = pos.bonus
+		p.change = pos.change
+		p.reached = false
 	}
 }
