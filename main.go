@@ -116,7 +116,7 @@ var l Land
 var winds map[string][]*wind.Wind
 var x xmpp.Xmpp
 var lock = sync.RWMutex{}
-var positionPool sync.Pool
+var positionPool *sync.Pool
 
 func LoadWinds() {
 	fmt.Println("Load winds")
@@ -155,7 +155,7 @@ func main() {
 
 	flag.Parse()
 
-	positionPool = sync.Pool{
+	positionPool = &sync.Pool{
 		New: func() interface{} {
 			return new(Position)
 		},
