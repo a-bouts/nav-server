@@ -59,17 +59,16 @@ type Position struct {
 	wind             float64
 	windSpeed        float64
 	boatSpeed        float64
-	sail             byte
-	foil             int
+	foil             uint8
 	distTo           float64
 	previousWindLine *Position
 	duration         float64
 	navDuration      float64
+	doorReached      uint8
 	isLand           bool
-	bonus            int //0 nothing, 1 line, 2 wind
+	sail             byte
 	change           bool
 	reached          bool
-	doorReached      string
 	isInIceLimits    bool
 }
 
@@ -82,7 +81,7 @@ type WindLinePosition struct {
 	WindSpeed float64 `json:"windSpeed"`
 	BoatSpeed float64 `json:"boatSpeed"`
 	Sail      byte    `json:"sail"`
-	Foil      int     `json:"foil"`
+	Foil      uint8   `json:"foil"`
 	Ice       bool    `json:"ice"`
 	Duration  float64 `json:"duration"`
 	Change    bool    `json:"change"`
@@ -136,10 +135,9 @@ func (pos *Position) clear() {
 	pos.duration = 0
 	pos.navDuration = 0
 	pos.isLand = false
-	pos.bonus = 0
 	pos.change = false
 	pos.reached = false
-	pos.doorReached = ""
+	pos.doorReached = 0
 	pos.isInIceLimits = false
 }
 
@@ -178,7 +176,6 @@ func isToAvoid(buoy Buoy, p LatLon) bool {
 var cartesian LatLonHaversine = LatLonHaversine{}
 
 func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64, wb float64, ws float64, d float64, factor float64, min *float64) (int, *Position) {
-	bonus := 0
 	change := false
 
 	twa := float64(b) - wb
@@ -242,7 +239,6 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 	res.sail = sail
 	res.foil = isFoil
 	res.isInIceLimits = context.race.IceLimits.isInIceLimits(&to)
-	res.bonus = bonus
 	res.duration = d + src.duration
 	res.navDuration = d
 	res.previousWindLine = src
@@ -315,7 +311,6 @@ func doorReached(context *Context, start *Position, src *Position, buoy Buoy, wb
 		res.sail = sail
 		res.foil = isFoil
 		res.isInIceLimits = context.race.IceLimits.isInIceLimits(&latlon)
-		res.bonus = 0
 		res.distTo = 0
 		res.duration = durationToWaypoint + src.duration
 		res.navDuration = durationToWaypoint
@@ -422,7 +417,7 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 					//fmt.Println("t", t, "a", a, "alpha", alpha, "a2", a2, "alpha2", alpha2, "b", b, "beta", beta, "b2", b2, "beta2", beta2)
 					reachedResult[az] = res
 					res.reached = true
-					res.doorReached = buoy.name()
+					res.doorReached = buoy.id()
 				}
 			}
 		}
@@ -507,13 +502,13 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 				if p == nil {
 					break
 				}
-				if p != nil && p.reached && p.doorReached == buoy.name() {
+				if p != nil && p.reached && p.doorReached == buoy.id() {
 					parentReached = true
 					break
 				}
 			}
 
-			if dst.reached && dst.doorReached == buoy.name() || parentReached {
+			if dst.reached && dst.doorReached == buoy.id() || parentReached {
 				buoy.reach(context, dst.previousWindLine)
 			}
 			d, e := max[az]

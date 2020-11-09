@@ -5,6 +5,7 @@ import (
 )
 
 type Door struct {
+	Id          uint8
 	Name        string
 	Destination LatLon
 	Departure   LatLon
@@ -20,6 +21,7 @@ type Reachers struct {
 }
 
 type Waypoint struct {
+	Id          uint8
 	Name        string
 	Destination LatLon
 	ToAvoid     [][][]float64
@@ -29,6 +31,7 @@ type Waypoint struct {
 
 type Buoy interface {
 	buoyType() string
+	id() uint8
 	name() string
 	destination() LatLon
 	departure() LatLon
@@ -41,13 +44,14 @@ type Buoy interface {
 
 func (race *Race) GetBuyos(context Context, start LatLon) []Buoy {
 	var buoys []Buoy
-	for _, w := range race.Waypoints {
+	for id, w := range race.Waypoints {
 		if w.Validated {
 			continue
 		}
 
 		if len(w.Latlons) == 1 {
 			buoys = append(buoys, &Waypoint{
+				Id:          uint8(id),
 				Name:        w.Name,
 				Destination: w.Latlons[0],
 				ToAvoid:     w.ToAvoid,
@@ -66,6 +70,7 @@ func (race *Race) GetBuyos(context Context, start LatLon) []Buoy {
 			departure := context.Destination(w.Latlons[0], a, math.Sqrt(d*d/2))
 
 			buoys = append(buoys, &Door{
+				Id:          uint8(id),
 				Name:        w.Name,
 				Destination: destination,
 				Departure:   departure,
@@ -111,6 +116,14 @@ func (wp Waypoint) name() string {
 
 func (d Door) name() string {
 	return d.Name
+}
+
+func (wp Waypoint) id() uint8 {
+	return wp.Id
+}
+
+func (d Door) id() uint8 {
+	return d.Id
 }
 
 func (wp Waypoint) destination() LatLon {
@@ -204,7 +217,6 @@ func (d *Door) reach(context *Context, pos *Position) {
 			duration:         pos.duration,
 			navDuration:      pos.navDuration,
 			isLand:           pos.isLand,
-			bonus:            pos.bonus,
 			change:           pos.change,
 			reached:          false}
 	}
