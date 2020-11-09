@@ -48,7 +48,7 @@ func BearingLine(context *Context, winds map[string][]*wind.Wind, start LatLon, 
 
 	w, w1, x := findWinds(winds, now)
 
-	wb, _ := wind.Interpolate(w, w1, start.Lat, start.Lon, x)
+	wb, _ := wind.Interpolate(w, w1, start.Lat, start.Lon, x, 0)
 
 	duration := 0.0
 
@@ -73,7 +73,7 @@ func BearingLine(context *Context, winds map[string][]*wind.Wind, start LatLon, 
 		for b := 0; b < 360; b++ {
 			src := result[b].Line[len(result[b].Line)-1]
 
-			wb, ws := wind.Interpolate(w, w1, src.Lat, src.Lon, x)
+			wb, ws := wind.Interpolate(w, w1, src.Lat, src.Lon, x, 0)
 
 			_, pos := jump(context, &Position{Latlon: start}, nil, hops[b], float64(b), wb, ws, delta, 1, nil, false)
 
@@ -98,7 +98,7 @@ func TwaLine(context Context, winds map[string][]*wind.Wind, start LatLon, beari
 
 	w, w1, x := findWinds(winds, now)
 
-	wb, _ := wind.Interpolate(w, w1, start.Lat, start.Lon, x)
+	wb, _ := wind.Interpolate(w, w1, start.Lat, start.Lon, x, 0)
 
 	duration := 0.0
 
@@ -123,7 +123,7 @@ func TwaLine(context Context, winds map[string][]*wind.Wind, start LatLon, beari
 		for b := 0; b < 360; b++ {
 			src := result[b].Line[len(result[b].Line)-1]
 
-			wb, ws := wind.Interpolate(w, w1, src.Lat, src.Lon, x)
+			wb, ws := wind.Interpolate(w, w1, src.Lat, src.Lon, x, 0)
 
 			var bearing = result[b].Twa + wb
 			if bearing > 360 {

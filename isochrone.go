@@ -34,6 +34,7 @@ type Context struct {
 	optim                 bool
 	maxDist               bool
 	alternatives          bool
+	vent                  int
 }
 
 type Isochrone struct {
@@ -509,7 +510,7 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 
 			go func(src *Position) {
 
-				wb, ws := wind.Interpolate(w, w1, src.Latlon.Lat, src.Latlon.Lon, x)
+				wb, ws := wind.Interpolate(w, w1, src.Latlon.Lat, src.Latlon.Lon, x, context.vent)
 
 				way, reachedByWay, wayDuration := way(context, start, src, wb, ws, duration, buoy, factor, min, isAlternative)
 				if reachedByWay {
@@ -698,6 +699,17 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 	context.maxDist = context.isExpes("max-dist")
 	context.alternatives = context.isExpes("alternatives")
 
+	context.vent = 0
+	if context.isExpes("vent1") {
+		context.vent = 1
+	} else if context.isExpes("vent2") {
+		context.vent = 2
+	} else if context.isExpes("vent3") {
+		context.vent = 3
+	} else if context.isExpes("vent4") {
+		context.vent = 4
+	}
+
 	var z polar.Polar
 	z = polar.Init(polar.Options{Race: race.Polars, Sail: sail})
 
@@ -751,7 +763,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 	pos.duration = 0.0
 	pos.navDuration = 0.0
 
-	wb, _ := wind.Interpolate(w, w1, pos.Latlon.Lat, pos.Latlon.Lon, x)
+	wb, _ := wind.Interpolate(w, w1, pos.Latlon.Lat, pos.Latlon.Lon, x, context.vent)
 	pos.twa = float64(bearing) - wb
 	if pos.twa < -180 {
 		pos.twa += 360

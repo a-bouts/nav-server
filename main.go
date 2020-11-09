@@ -48,7 +48,12 @@ func Expes(w http.ResponseWriter, req *http.Request) {
 		"sqrt-dist-from",
 		"optim",
 		"max-dist",
-		"alternatives"}
+		"alternatives",
+		"vent1",
+		"vent2",
+		"vent3",
+		"vent4",
+	}
 
 	json.NewEncoder(w).Encode(expes)
 }
