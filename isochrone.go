@@ -454,7 +454,7 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 						if !exists || len(isochrone) > 1 {
 							isochrone = make(map[int]*Position)
 						}
-						if !exists || isochrone[b].duration > wayDuration {
+						if !exists || isochrone[b] == nil || isochrone[b].duration > wayDuration {
 							isochrone[b] = dst
 							minWayDuration = wayDuration
 						} else {
