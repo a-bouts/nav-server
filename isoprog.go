@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/a-bouts/nav-server/polar"
@@ -18,7 +19,12 @@ func GetBoatLines(expes map[string]bool, winds map[string][]*wind.Wind, start La
 	context := Context{
 		expes:      expes,
 		boat:       polar.Boat{Foil: foil, Hull: hull},
-		winchMalus: winchMalus}
+		winchMalus: winchMalus,
+		positionPool: sync.Pool{
+			New: func() interface{} {
+				return new(Position)
+			},
+		}}
 
 	var z polar.Polar
 	z = polar.Init(polar.Options{Race: race.Polars, Sail: sail})
