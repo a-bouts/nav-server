@@ -9,7 +9,7 @@ import (
 	"os"
 
 	//"runtime"
-	"runtime/pprof"
+
 	"sync"
 	"time"
 
@@ -65,15 +65,15 @@ func Refresh(w http.ResponseWriter, req *http.Request) {
 
 func Navigate(w http.ResponseWriter, req *http.Request) {
 	//runtime.SetCPUProfileRate(300)
-	f, err := os.Create("profile")
-	if err != nil {
-		log.Fatal("could not create CPU profile: ", err)
-	}
-	defer f.Close()
-	if err := pprof.StartCPUProfile(f); err != nil {
-		log.Fatal("could not start CPU profile: ", err)
-	}
-	defer pprof.StopCPUProfile()
+	// f, err := os.Create("profile")
+	// if err != nil {
+	// 	log.Fatal("could not create CPU profile: ", err)
+	// }
+	// defer f.Close()
+	// if err := pprof.StartCPUProfile(f); err != nil {
+	// 	log.Fatal("could not start CPU profile: ", err)
+	// }
+	// defer pprof.StopCPUProfile()
 
 	//params := mux.Vars(req)
 	var gonav GoNav
@@ -194,11 +194,11 @@ func main() {
 	fmt.Println("Start server")
 
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/private/nav/run", Navigate).Methods("POST")
-	router.HandleFunc("/private/nav/refresh", Refresh).Methods("GET")
-	router.HandleFunc("/private/nav/expes", Expes).Methods("GET")
-	router.HandleFunc("/private/nav/test", TestLand).Methods("POST")
-	router.HandleFunc("/private/nav/boatlines", BoatLines).Methods("POST")
+	router.HandleFunc("/nav/run", Navigate).Methods("POST")
+	router.HandleFunc("/nav/refresh", Refresh).Methods("GET")
+	router.HandleFunc("/nav/expes", Expes).Methods("GET")
+	router.HandleFunc("/nav/test", TestLand).Methods("POST")
+	router.HandleFunc("/nav/boatlines", BoatLines).Methods("POST")
 	log.Fatal(http.ListenAndServe(":8888", router))
 
 }
