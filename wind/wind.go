@@ -52,7 +52,7 @@ func Merge(winds map[string][]*Wind) error {
 		}
 	}
 	for _, k := range toRemove {
-		fmt.Println("Remove from winds", k)
+		log.Println("Remove from winds", k)
 		delete(winds, k)
 	}
 
@@ -126,7 +126,7 @@ func Merge(winds map[string][]*Wind) error {
 			}
 
 			wind := Init(date, file)
-			fmt.Println("Init", sdate, wind.File)
+			log.Println("Init", sdate, wind.File)
 			winds[sdate] = append(winds[sdate], &wind)
 		}
 	}
@@ -158,7 +158,7 @@ func LoadAll2() map[string][]*Wind {
 
 		d := strings.Split(f, ".")[0]
 
-		fmt.Println(f)
+		log.Println(f)
 
 		h, err := strconv.Atoi(strings.Split(f, ".")[1][1:])
 		if err != nil {
@@ -200,7 +200,7 @@ func LoadAll2() map[string][]*Wind {
 			date = date.Add(time.Hour * time.Duration(f))
 			sdate := date.Format("2006010215")
 			wind := Init(date, file)
-			fmt.Println("Init", sdate, wind.File)
+			log.Println("Init", sdate, wind.File)
 			winds[sdate] = append(winds[sdate], &wind)
 		}
 	}
@@ -210,7 +210,7 @@ func LoadAll2() map[string][]*Wind {
 func load(winds map[string]Wind, m time.Time) bool {
 	stamp := m.Format("20060102") + roundHours(m.Hour(), 6)
 
-	fmt.Println("Load forecast", stamp)
+	log.Println("Load forecast", stamp)
 
 	//load json file
 	content, err := ioutil.ReadFile("json-data/" + stamp + ".json")
@@ -226,7 +226,7 @@ func load(winds map[string]Wind, m time.Time) bool {
 		_, exists := winds[sdate]
 		if !exists {
 			wind := Init(date, stamp+".f"+fmt.Sprintf("%03d", f))
-			fmt.Println("Init", sdate, wind.File)
+			log.Println("Init", sdate, wind.File)
 			winds[sdate] = wind
 		}
 	}

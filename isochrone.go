@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"math"
-	"net/http"
 	"sort"
 	"sync"
 	"time"
@@ -154,27 +152,6 @@ func (context *Context) isExpes(expe string) bool {
 	}
 
 	return false
-}
-
-func isLand2(l *Land, pos Position, c chan Position) {
-	//url := fmt.Sprintf("https://wind.bouts.me/land/%f/%f", pos.Latlon.Lat, pos.Latlon.Lon)
-	url := fmt.Sprintf("http://land-server:5000/land/%f/%f", pos.Latlon.Lat, pos.Latlon.Lon)
-	resp, err := http.Get(url)
-	if err != nil {
-		fmt.Println(url, err)
-		c <- pos
-		return
-	}
-	defer resp.Body.Close()
-	var isLand IsLand
-	_ = json.NewDecoder(resp.Body).Decode(&isLand)
-	pos.isLand = isLand.IsLand
-	c <- pos
-}
-
-func isLand(l *Land, pos Position, c chan Position) {
-	pos.isLand = l.IsLand(pos.Latlon.Lat, pos.Latlon.Lon)
-	c <- pos
 }
 
 func isToAvoid(buoy Buoy, p LatLon) bool {
@@ -574,7 +551,7 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 			}
 		}
 		if nbLtMax+nbToAvoid+nbLand+nbFar+nbFarFromMin > 0 {
-			fmt.Println("Remove", nbLtMax, "< Max, ", nbToAvoid, "to avoid, ", nbLand, "landi, ", nbFar, "far from way, ", nbFarFromMin, "far from min")
+			logger.debugln("Remove", nbLtMax, "< Max, ", nbToAvoid, "to avoid, ", nbLand, "landi, ", nbFar, "far from way, ", nbFarFromMin, "far from min")
 		}
 		for _, az := range toRemove {
 			context.positionProvider.put(isochrone[az])
@@ -592,7 +569,7 @@ func newPos(departure LatLon) *Position {
 
 func newPosition(context Context, start LatLon, buoy Buoy) float64 {
 	dist, _ := context.DistanceAndBearingTo(start, buoy.destination())
-	fmt.Printf("Go to waypoint %s (*%f - %.1f km)\n", buoy.name(), buoy.getFactor(), dist/1000.0)
+	logger.debugf("Go to waypoint %s (*%f - %.1f km)\n", buoy.name(), buoy.getFactor(), dist/1000.0)
 
 	return dist
 }
@@ -644,7 +621,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 	z = polar.Init(polar.Options{Race: race.Polars, Sail: sail})
 
 	if context.isExpes("new-polars") {
-		fmt.Println("Load new polars")
+		logger.debugln("Load new polars")
 		z = polar.Load(polar.Options{Race: race.Boat, Sail: sail})
 	}
 
@@ -756,7 +733,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 					for az, pdi := range previousDoorIsochrones[0] {
 						nextIsochrone[int(float64(az)/previousDoorFactor*buoy.getFactor())] = pdi
 					}
-					fmt.Printf("nextIsochrone : %d - %f %f\n", len(nextIsochrone), duration, p.duration)
+					logger.debugf("nextIsochrone : %d - %f %f\n", len(nextIsochrone), duration, p.duration)
 					d = p.duration - duration
 					previousDoorIsochrones = previousDoorIsochrones[1:len(previousDoorIsochrones)]
 				}
@@ -764,9 +741,9 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 			}
 		}
 
-		fmt.Printf("Nav(%s) %f:%.1f - %d(%d) to %s (%.1f km)\n", buoy.name(), duration, d, len(nav), int(buoy.getFactor()), buoy.name(), min/1000.0)
+		logger.debugf("Nav(%s) %f:%.1f - %d(%d) to %s (%.1f km)\n", buoy.name(), duration, d, len(nav), int(buoy.getFactor()), buoy.name(), min/1000.0)
 		nav, reached, navDuration = navigate(&context, now, buoy.getFactor(), max, &min, pos, nav, nextIsochrone, buoy, d)
-		fmt.Printf("NavDuration : %.1f - %d (%t)\n", navDuration, len(nav), reached)
+		logger.debugf("NavDuration : %.1f - %d (%t)\n", navDuration, len(nav), reached)
 
 		duration += navDuration
 
@@ -809,7 +786,7 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 		}
 
 		if !reached && len(nav) == 0 && len(previousDoorIsochrones) == 0 {
-			fmt.Println("No way found")
+			logger.debugln("No way found")
 			success = false
 			break
 		}
@@ -818,16 +795,16 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 		now = now.Add(time.Duration(int(navDuration*60.0)) * time.Minute)
 		if reached {
 			if buoy.buoyType() == "WAYPOINT" {
-				fmt.Printf("Waypoint %s reached %dj %.1fh\n", buoy.name(), int(duration/24.0), float64(int(duration)%24)+duration-math.Floor(duration))
+				logger.debugf("Waypoint %s reached %dj %.1fh\n", buoy.name(), int(duration/24.0), float64(int(duration)%24)+duration-math.Floor(duration))
 				if stop {
 					mustStop = true
 				}
 			} else if buoy.buoyType() == "DOOR" {
 				d := buoy.(*Door)
-				fmt.Printf("Door %s reached %dj %.1fh\n", buoy.name(), int(duration/24.0), float64(int(duration)%24)+duration-math.Floor(duration))
+				logger.debugf("Door %s reached %dj %.1fh\n", buoy.name(), int(duration/24.0), float64(int(duration)%24)+duration-math.Floor(duration))
 
 				if len(d.reachers.isochrones) == 0 {
-					fmt.Println("No way found")
+					logger.debugln("No way found")
 					success = false
 					break
 				}

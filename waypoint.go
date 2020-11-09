@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"math"
 )
 
@@ -93,10 +92,6 @@ func (race *Race) GetBuyos(context Context, start LatLon) []Buoy {
 			factor = 1
 		}
 		b.setFactor(factor)
-	}
-
-	for _, b := range buoys {
-		fmt.Println("Buoy", b)
 	}
 
 	return buoys

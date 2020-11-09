@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -63,7 +62,7 @@ func Navigate(w http.ResponseWriter, req *http.Request) {
 	var gonav GoNav
 	_ = json.NewDecoder(req.Body).Decode(&gonav)
 
-	fmt.Println(gonav)
+	logger.infof("Navigate '%s' every '%.2f' stop %t\n", gonav.Race.Name, gonav.Delta, gonav.Stop)
 
 	winchMalus := 5.0
 	if gonav.Winch {
@@ -82,7 +81,7 @@ func Navigate(w http.ResponseWriter, req *http.Request) {
 	isos := Run(gonav.Expes, &l, winds, &x, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, deltas, gonav.MaxDuration, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, gonav.Stop, positionPool)
 
 	delta := time.Now().Sub(start)
-	fmt.Println("Navigation", delta)
+	logger.infoln("Navigation took", delta)
 
 	json.NewEncoder(w).Encode(isos)
 }
@@ -101,7 +100,7 @@ func BoatLines(w http.ResponseWriter, req *http.Request) {
 	lines := GetBoatLines(gonav.Expes, winds, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, positionPool)
 
 	delta := time.Now().Sub(start)
-	fmt.Println("Boatlines", delta)
+	logger.infoln("Boatlines took", delta)
 
 	json.NewEncoder(w).Encode(lines)
 }
@@ -118,8 +117,10 @@ var x xmpp.Xmpp
 var lock = sync.RWMutex{}
 var positionPool *sync.Pool
 
+var logger *Logger
+
 func LoadWinds() {
-	fmt.Println("Load winds")
+	logger.infoln("Load winds")
 	lock.Lock()
 	winds = wind.LoadAll2()
 	lock.Unlock()
@@ -144,6 +145,8 @@ func UpdateWinds() {
 
 func main() {
 
+	logger = &Logger{debug: false}
+
 	fs := flag.NewFlagSet("nav-server", flag.ExitOnError)
 	var (
 		xmppHost     = fs.String("xmpp-host", "", "")
@@ -163,7 +166,7 @@ func main() {
 
 	x = xmpp.Xmpp{Config: xmpp.Config{Host: *xmppHost, Jid: *xmppJid, Password: *xmppPassword, To: *xmppTo}}
 
-	fmt.Println("Load lands")
+	logger.infoln("Load lands")
 	l = InitLand()
 
 	LoadWinds()
@@ -181,7 +184,7 @@ func main() {
 	//    job22.Do(LoadWinds)
 	go s.Start()
 
-	fmt.Println("Start server")
+	logger.infoln("Start server")
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/debug/nav/run", Navigate).Methods("POST")
