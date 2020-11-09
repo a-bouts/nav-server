@@ -589,7 +589,7 @@ func findWinds(winds map[string][]*wind.Wind, m time.Time) ([]*wind.Wind, []*win
 	return winds[keys[len(keys)-1]], nil, 0
 }
 
-func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bearing int, currentSail byte, race Race, delta float64, deltas map[int]float64, maxDuration float64, delay int, sail int, foil bool, hull bool, winchMalus float64, stop bool) Navs {
+func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bearing int, currentSail byte, race Race, delta float64, deltas map[int]float64, maxDuration float64, delay int, sail int, foil bool, hull bool, winchMalus float64, stop bool, positionPool sync.Pool) Navs {
 
 	context := Context{
 		expes:         expes,
@@ -600,11 +600,8 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 		winchMalus:    winchMalus,
 		maxDistFactor: 1.5,
 		delta:         delta,
-		positionPool: sync.Pool{
-			New: func() interface{} {
-				return new(Position)
-			},
-		}}
+		positionPool:  positionPool,
+	}
 
 	if delta <= 0 {
 		context.expes["progressive-intervales"] = true
