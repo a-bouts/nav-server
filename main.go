@@ -90,6 +90,8 @@ func BoatLines(w http.ResponseWriter, req *http.Request) {
 	var gonav GoNav
 	_ = json.NewDecoder(req.Body).Decode(&gonav)
 
+	logger.infof("Boatlines '%s' every '%.2f'\n", gonav.Race.Name, gonav.Delta)
+
 	winchMalus := 5.0
 	if gonav.Winch {
 		winchMalus = 1.25
@@ -97,7 +99,7 @@ func BoatLines(w http.ResponseWriter, req *http.Request) {
 
 	start := time.Now()
 
-	lines := GetBoatLines(gonav.Expes, winds, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, positionPool)
+	lines := GetBoatLines(gonav.Expes, winds, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, 1.0, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, positionPool)
 
 	delta := time.Now().Sub(start)
 	logger.infoln("Boatlines took", delta)

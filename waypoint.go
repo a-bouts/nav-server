@@ -203,7 +203,6 @@ func (d *Door) reach(context *Context, pos *Position) {
 	if !found || last[a].fromDist < dist {
 		last[a] = &Position{
 			Latlon:           pos.Latlon,
-			az:               a,
 			fromDist:         dist,
 			bearing:          pos.bearing,
 			twa:              pos.twa,
