@@ -99,8 +99,8 @@ func Merge(winds map[string][]*Wind) error {
 
 		_, found := forecasts[forecastHour]
 
-		//quand c'est la prévision courante, on la conserve meme si une nouvelle prévision est arrivé
-		if !found || forecastHour >= 0 {
+		//quand c'est la prévision précédente, on la conserve meme si une nouvelle prévision est arrivé
+		if !found || forecastHour >= -3 {
 			forecasts[forecastHour] = append(forecasts[forecastHour], f)
 		}
 	}
