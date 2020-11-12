@@ -100,7 +100,7 @@ func Merge(winds map[string][]*Wind) error {
 		_, found := forecasts[forecastHour]
 
 		//quand c'est la prévision précédente, on la conserve meme si une nouvelle prévision est arrivé
-		if !found || forecastHour >= -3 {
+		if !found || forecastHour >= 0 {
 			forecasts[forecastHour] = append(forecasts[forecastHour], f)
 		}
 	}
@@ -368,7 +368,10 @@ func midInterpolate(ws []*Wind, lat float64, lon float64, h float64) (float64, f
 
 func Interpolate(w1 []*Wind, w2 []*Wind, lat float64, lon float64, h float64) (float64, float64) {
 
-	u, v := midInterpolate(w1, lat, lon, 1-h)
+	// -1 .x. 0 .y. 1
+	// x : merge
+	// y : use only new
+	u, v := midInterpolate(w1[len(w1)-1:len(w1)], lat, lon, 1-h)
 
 	if w2 != nil {
 		u2, v2 := midInterpolate(w2, lat, lon, h)
