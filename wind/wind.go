@@ -100,7 +100,7 @@ func Merge(winds map[string][]*Wind) error {
 		_, found := forecasts[forecastHour]
 
 		//quand c'est la prévision courante, on la conserve meme si une nouvelle prévision est arrivé
-		if !found || forecastHour >= -3 {
+		if !found || forecastHour >= 0 {
 			forecasts[forecastHour] = append(forecasts[forecastHour], f)
 		}
 	}
@@ -401,10 +401,10 @@ func Interpolate1(w1 []*Wind, w2 []*Wind, lat float64, lon float64, h float64) (
 
 	// cas j'utilise toujours anciennes polaires
 
-	u, v := midInterpolate(w1[0:1], lat, lon, 1-h)
+	u, v := midInterpolate(w1[len(w1)-1:len(w1)], lat, lon, 1-h)
 
 	if w2 != nil {
-		u2, v2 := midInterpolate(w2[0:1], lat, lon, h)
+		u2, v2 := midInterpolate(w2, lat, lon, h)
 		u = u2*h + u*(1-h)
 		v = v2*h + v*(1-h)
 	}
@@ -417,10 +417,10 @@ func Interpolate2(w1 []*Wind, w2 []*Wind, lat float64, lon float64, h float64) (
 
 	// cas j'utilise toujours nouvelles polaires
 
-	u, v := midInterpolate(w1[len(w1)-1:len(w1)], lat, lon, 1-h)
+	u, v := midInterpolate(w1, lat, lon, 1-h)
 
 	if w2 != nil {
-		u2, v2 := midInterpolate(w2[len(w2)-1:len(w2)], lat, lon, h)
+		u2, v2 := midInterpolate(w2[0:1], lat, lon, h)
 		u = u2*h + u*(1-h)
 		v = v2*h + v*(1-h)
 	}
