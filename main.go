@@ -113,6 +113,14 @@ func TestLand(w http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(w).Encode(isos)
 }
 
+func Healthz(w http.ResponseWriter, req *http.Request) {
+	type health struct {
+		Status string `json:"status"`
+	}
+
+	json.NewEncoder(w).Encode(health{Status: "Ok"})
+}
+
 var l Land
 var winds map[string][]*wind.Wind
 var x xmpp.Xmpp
@@ -189,11 +197,12 @@ func main() {
 	logger.infoln("Start server")
 
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/debug/nav/run", Navigate).Methods("POST")
-	router.HandleFunc("/debug/nav/refresh", Refresh).Methods("GET")
-	router.HandleFunc("/debug/nav/expes", Expes).Methods("GET")
-	router.HandleFunc("/debug/nav/test", TestLand).Methods("POST")
-	router.HandleFunc("/debug/nav/boatlines", BoatLines).Methods("POST")
+	router.HandleFunc("/nav/run", Navigate).Methods("POST")
+	router.HandleFunc("/nav/refresh", Refresh).Methods("GET")
+	router.HandleFunc("/nav/expes", Expes).Methods("GET")
+	router.HandleFunc("/nav/test", TestLand).Methods("POST")
+	router.HandleFunc("/nav/boatlines", BoatLines).Methods("POST")
+	router.HandleFunc("/nav/-/healthz", Healthz).Methods("GET")
 	log.Fatal(http.ListenAndServe(":8888", router))
 
 }
