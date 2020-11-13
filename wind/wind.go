@@ -384,7 +384,7 @@ func Interpolate(w1 []*Wind, w2 []*Wind, lat float64, lon float64, h float64, ve
 
 func Interpolate0(w1 []*Wind, w2 []*Wind, lat float64, lon float64, h float64) (float64, float64) {
 
-	u, v := midInterpolate(w1, lat, lon, 1-h)
+	u, v := midInterpolate(w1, lat, lon, h)
 
 	if w2 != nil {
 		u2, v2 := midInterpolate(w2, lat, lon, h)
