@@ -679,7 +679,7 @@ func findWinds(winds map[string][]*wind.Wind, m time.Time) ([]*wind.Wind, []*win
 	return winds[keys[len(keys)-1]], nil, 0
 }
 
-func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bearing int, currentSail byte, race Race, delta float64, deltas map[int]float64, maxDuration float64, delay int, sail int, foil bool, hull bool, winchMalus float64, stop bool) Navs {
+func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp.Xmpp, start LatLon, bearing int, currentSail byte, race Race, delta float64, deltas map[int]float64, maxDuration float64, delay float64, sail int, foil bool, hull bool, winchMalus float64, stop bool) Navs {
 
 	context := Context{
 		expes:         expes,
@@ -732,8 +732,8 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 	duration := 0.0
 	initNow := time.Now().UTC()
 	now := initNow
-	now = now.Add(time.Duration(delay) * time.Hour)
-	startTime := time.Now().Add(time.Duration(delay) * time.Hour)
+	now = now.Add(time.Duration(int(math.Round(delay * 60))) * time.Minute)
+	startTime := time.Now().Add(time.Duration(int(math.Round(delay * 60))) * time.Minute)
 	location, err := time.LoadLocation("Europe/Paris")
 	if err == nil {
 		startTime = startTime.In(location)

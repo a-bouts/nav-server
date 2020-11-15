@@ -31,7 +31,7 @@ type GoNav struct {
 	Race        Race            `json:"race"`
 	Delta       float64         `json:"delta"`
 	MaxDuration float64         `json:"maxDuration"`
-	Delay       int             `json:"delay"`
+	Delay       float64         `json:"delay"`
 	Sail        int             `json:"sail"`
 	Foil        bool            `json:"foil"`
 	Hull        bool            `json:"hull"`
