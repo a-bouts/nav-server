@@ -68,7 +68,7 @@ func BearingLine(context *Context, winds map[string][]*wind.Wind, start LatLon, 
 		hops[b] = &pos
 	}
 
-	for ok := true; ok; ok = duration < 24.0 {
+	for ok := true; ok; ok = duration < 72.0 {
 
 		for b := 0; b < 360; b++ {
 			src := result[b].Line[len(result[b].Line)-1]
@@ -119,7 +119,7 @@ func TwaLine(context Context, winds map[string][]*wind.Wind, start LatLon, beari
 		hops[b] = &pos
 	}
 
-	for ok := true; ok; ok = duration < 24.0 {
+	for ok := true; ok; ok = duration < 72.0 {
 
 		for b := 0; b < 360; b++ {
 			src := result[b].Line[len(result[b].Line)-1]
