@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math"
 	"sync"
 	"time"
 
@@ -15,7 +14,7 @@ type BoatLine struct {
 	Line []LatLon `json:"line"`
 }
 
-func GetBoatLines(expes map[string]bool, winds map[string][]*wind.Wind, start LatLon, bearing int, currentSail byte, race Race, delta float64, delay float64, sail int, foil bool, hull bool, winchMalus float64) []map[int](*BoatLine) {
+func GetBoatLines(expes map[string]bool, winds map[string][]*wind.Wind, start LatLon, bearing int, currentSail byte, race Race, delta float64, startTime time.Time, sail int, foil bool, hull bool, winchMalus float64) []map[int](*BoatLine) {
 
 	context := Context{
 		expes:      expes,
@@ -37,15 +36,15 @@ func GetBoatLines(expes map[string]bool, winds map[string][]*wind.Wind, start La
 
 	context.polar = z
 
-	return []map[int](*BoatLine){BearingLine(&context, winds, start, bearing, currentSail, delta, delay, sail), TwaLine(context, winds, start, bearing, currentSail, delta, delay, sail)}
+	return []map[int](*BoatLine){BearingLine(&context, winds, start, bearing, currentSail, delta, startTime, sail), TwaLine(context, winds, start, bearing, currentSail, delta, startTime, sail)}
 }
 
-func BearingLine(context *Context, winds map[string][]*wind.Wind, start LatLon, bearing int, currentSail byte, delta float64, delay float64, sail int) map[int](*BoatLine) {
+func BearingLine(context *Context, winds map[string][]*wind.Wind, start LatLon, bearing int, currentSail byte, delta float64, startTime time.Time, sail int) map[int](*BoatLine) {
 
 	result := make(map[int](*BoatLine))
 	var hops [360]*Position
 
-	now := time.Now().UTC().Add(time.Duration(int(math.Round(delay * 60))) * time.Minute)
+	now := startTime.UTC()
 
 	w, w1, x := findWinds(winds, now)
 
@@ -90,12 +89,12 @@ func BearingLine(context *Context, winds map[string][]*wind.Wind, start LatLon, 
 	return result
 }
 
-func TwaLine(context Context, winds map[string][]*wind.Wind, start LatLon, bearing int, currentSail byte, delta float64, delay float64, sail int) map[int](*BoatLine) {
+func TwaLine(context Context, winds map[string][]*wind.Wind, start LatLon, bearing int, currentSail byte, delta float64, startTime time.Time, sail int) map[int](*BoatLine) {
 
 	result := make(map[int](*BoatLine))
 	var hops [360]*Position
 
-	now := time.Now().UTC().Add(time.Duration(int(math.Round(delay * 60))) * time.Minute)
+	now := startTime.UTC()
 
 	w, w1, x := findWinds(winds, now)
 
