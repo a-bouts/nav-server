@@ -95,7 +95,7 @@ func TwaLine(context Context, winds map[string][]*wind.Wind, start LatLon, beari
 	result := make(map[int](*BoatLine))
 	var hops [360]*Position
 
-	now := time.Now().UTC().Add(time.Duration(delay) * time.Hour)
+	now := time.Now().UTC().Add(time.Duration(delay) * time.Minute)
 
 	w, w1, x := findWinds(winds, now)
 

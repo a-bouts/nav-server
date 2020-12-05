@@ -637,8 +637,8 @@ func Run(expes map[string]bool, l *Land, winds map[string][]*wind.Wind, xm *xmpp
 	duration := 0.0
 	initNow := time.Now().UTC()
 	now := initNow
-	now = now.Add(time.Duration(delay) * time.Hour)
-	startTime := time.Now().Add(time.Duration(delay) * time.Hour)
+	now = now.Add(time.Duration(delay) * time.Minute)
+	startTime := time.Now().Add(time.Duration(delay) * time.Minute)
 	location, err := time.LoadLocation("Europe/Paris")
 	if err == nil {
 		startTime = startTime.In(location)
