@@ -62,7 +62,7 @@ func Navigate(w http.ResponseWriter, req *http.Request) {
 	var gonav GoNav
 	_ = json.NewDecoder(req.Body).Decode(&gonav)
 
-	logger.infof("Navigate '%s' every '%.2f' stop %t\n", gonav.Race.Name, gonav.Delta, gonav.Stop)
+	logger.infof("Navigate '%s' from '%.2f' every '%.2f' stop %t\n", gonav.Race.Name, gonav.Delay, gonav.Delta, gonav.Stop)
 
 	winchMalus := 5.0
 	if gonav.Winch {
@@ -155,7 +155,7 @@ func UpdateWinds() {
 
 func main() {
 
-	logger = &Logger{debug: false}
+	logger = &Logger{debug: true}
 
 	fs := flag.NewFlagSet("nav-server", flag.ExitOnError)
 	var (
