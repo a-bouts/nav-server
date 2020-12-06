@@ -28,6 +28,7 @@ type GoNav struct {
 	Delta       float64         `json:"delta"`
 	MaxDuration float64         `json:"maxDuration"`
 	Delay       int             `json:"delay"`
+	StartTime   time.Time       `json:"startTime"`
 	Sail        int             `json:"sail"`
 	Foil        bool            `json:"foil"`
 	Hull        bool            `json:"hull"`
@@ -62,7 +63,7 @@ func Navigate(w http.ResponseWriter, req *http.Request) {
 	var gonav GoNav
 	_ = json.NewDecoder(req.Body).Decode(&gonav)
 
-	logger.infof("Navigate '%s' from '%d' every '%.2f' stop %t\n", gonav.Race.Name, gonav.Delay, gonav.Delta, gonav.Stop)
+	logger.infof("Navigate '%s' from '%s' every '%.2f' stop %t\n", gonav.Race.Name, gonav.StartTime.String(), gonav.Delta, gonav.Stop)
 
 	winchMalus := 5.0
 	if gonav.Winch {
@@ -78,7 +79,7 @@ func Navigate(w http.ResponseWriter, req *http.Request) {
 		72:   3.0,
 		9999: 6.0}
 
-	isos := Run(gonav.Expes, &l, winds, &x, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, deltas, gonav.MaxDuration, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, gonav.Stop, positionPool)
+	isos := Run(gonav.Expes, &l, winds, &x, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, deltas, gonav.MaxDuration, gonav.StartTime, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, gonav.Stop, positionPool)
 
 	delta := time.Now().Sub(start)
 	logger.infoln("Navigation took", delta)
@@ -99,7 +100,7 @@ func BoatLines(w http.ResponseWriter, req *http.Request) {
 
 	start := time.Now()
 
-	lines := GetBoatLines(gonav.Expes, winds, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, 1.0, gonav.Delay, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, positionPool)
+	lines := GetBoatLines(gonav.Expes, winds, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, 1.0, gonav.StartTime, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, positionPool)
 
 	delta := time.Now().Sub(start)
 	logger.infoln("Boatlines took", delta)
