@@ -3,6 +3,7 @@ module github.com/a-bouts/nav-server
 go 1.14
 
 require (
+	github.com/go-co-op/gocron v0.3.3
 	github.com/google/pprof v0.0.0-20200630070148-6609db78bf68 // indirect
 	github.com/gorilla/handlers v1.4.2
 	github.com/gorilla/mux v1.7.4
@@ -12,5 +13,6 @@ require (
 	github.com/nilsmagnus/grib v1.2.6
 	github.com/peterbourgon/ff v1.7.0
 	github.com/pkg/profile v1.5.0
+	github.com/sirupsen/logrus v1.7.0
 	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae // indirect
 )
