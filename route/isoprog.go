@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/a-bouts/nav-server/api/model"
 	"github.com/a-bouts/nav-server/latlon"
 	"github.com/a-bouts/nav-server/polar"
@@ -54,6 +56,7 @@ func BearingLine(context *Context, winds *wind.Winds) map[int](*BoatLine) {
 	now := context.route.StartTime.UTC()
 
 	w, w1, x := winds.FindWinds(now)
+	log.Debugf("Found winds %t : %s - %.2f - %s", now, w.String(), x, w1.String())
 
 	wb, _ := wind.Interpolate(w, w1, context.route.Start.Lat, context.route.Start.Lon, x)
 
