@@ -56,7 +56,7 @@ func BearingLine(context *Context, winds *wind.Winds) map[int](*BoatLine) {
 	now := context.route.StartTime.UTC()
 
 	w, w1, x := winds.FindWinds(now)
-	log.Debugf("Found winds %t : %s - %.2f - %s", now, w.String(), x, w1.String())
+	log.Debugf("Found winds %s : %s - %.2f - %s", now.Format(time.RFC3339), w.String(), x, w1.String())
 
 	wb, _ := wind.Interpolate(w, w1, context.route.Start.Lat, context.route.Start.Lon, x)
 
@@ -95,6 +95,7 @@ func BearingLine(context *Context, winds *wind.Winds) map[int](*BoatLine) {
 		duration += delta
 		now = now.Add(time.Duration(int(delta*60.0)) * time.Minute)
 		w, w1, x = winds.FindWinds(now)
+		log.Debugf("Found winds %s : %s - %.2f - %s", now.Format(time.RFC3339), w.String(), x, w1.String())
 	}
 
 	return result
@@ -109,6 +110,7 @@ func TwaLine(context Context, winds *wind.Winds) map[int](*BoatLine) {
 	now := context.route.StartTime.UTC()
 
 	w, w1, x := winds.FindWinds(now)
+	log.Debugf("Found winds %s : %s - %.2f - %s", now.Format(time.RFC3339), w.String(), x, w1.String())
 
 	wb, _ := wind.Interpolate(w, w1, context.route.Start.Lat, context.route.Start.Lon, x)
 
@@ -152,6 +154,7 @@ func TwaLine(context Context, winds *wind.Winds) map[int](*BoatLine) {
 		duration += delta
 		now = now.Add(time.Duration(int(delta*60.0)) * time.Minute)
 		w, w1, x = winds.FindWinds(now)
+		log.Debugf("Found winds %s : %s - %.2f - %s", now.Format(time.RFC3339), w.String(), x, w1.String())
 	}
 
 	return result

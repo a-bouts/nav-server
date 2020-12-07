@@ -18,6 +18,9 @@ type ForecastWinds []*Wind
 
 func (w ForecastWinds) String() string {
 	res := ""
+	if w == nil || len(w) == 0 {
+		return res
+	}
 	res += w[0].Date.Format("2006010215") + "(" + w[0].File
 	if len(w) > 1 {
 		res += "," + w[1].File
