@@ -1,11 +1,13 @@
-package main
+package land
 
 import (
-	"fmt"
 	"io/ioutil"
 	"math"
+
+	log "github.com/sirupsen/logrus"
 )
 
+// Land contains slice containing 0 if sea and 1 if land
 type Land struct {
 	lat0 float64
 	latN float64
@@ -15,26 +17,30 @@ type Land struct {
 	data []byte
 }
 
-func InitLand() Land {
-	b, err := ioutil.ReadFile("land/output")
+// InitLand load lands file
+func InitLand() (*Land, error) {
+	file := "land/output"
+
+	b, err := ioutil.ReadFile(file)
 	if err != nil {
-		fmt.Print(err)
+		log.Errorf("Error reading file '%s'", file)
+		return nil, err
 	}
-	return Land{
+	return &Land{
 		lat0: -90.0,
 		latN: 90.0,
 		lon0: -180.0,
 		lonN: 180.00 - 360.0/43200.0,
 		step: 360.0 / 43200.0,
-		data: b}
+		data: b}, nil
 }
 
+// IsLand check if location is land or sea
 func (l Land) IsLand(lat float64, lon float64) bool {
 	i := int(math.Round(lat / l.step))
 	j := int(math.Round(lon / l.step))
 
 	i0 := int(l.lat0 / l.step)
-	//iN := int(l.latN/l.step)
 	j0 := int(l.lon0 / l.step)
 	jN := int(l.lonN / l.step)
 
