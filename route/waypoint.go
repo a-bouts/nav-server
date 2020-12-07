@@ -1,17 +1,19 @@
-package main
+package route
 
 import (
 	"math"
+
+	"github.com/a-bouts/nav-server/latlon"
 )
 
 type Door struct {
 	Id          uint8
 	Name        string
-	Destination LatLon
-	Departure   LatLon
+	Destination latlon.LatLon
+	Departure   latlon.LatLon
 	ToAvoid     [][][]float64
-	Left        LatLon
-	Right       LatLon
+	Left        latlon.LatLon
+	Right       latlon.LatLon
 	factor      float64
 	reachers    *Reachers
 }
@@ -23,7 +25,7 @@ type Reachers struct {
 type Waypoint struct {
 	Id          uint8
 	Name        string
-	Destination LatLon
+	Destination latlon.LatLon
 	ToAvoid     [][][]float64
 	Radius      int
 	factor      float64
@@ -33,8 +35,8 @@ type Buoy interface {
 	buoyType() string
 	id() uint8
 	name() string
-	destination() LatLon
-	departure() LatLon
+	destination() latlon.LatLon
+	departure() latlon.LatLon
 	toAvoid() [][][]float64
 	radius() int
 	getFactor() float64
@@ -42,7 +44,7 @@ type Buoy interface {
 	reach(context *Context, alt *Alternative)
 }
 
-func (race *Race) GetBuyos(context Context, start LatLon) []Buoy {
+func (race *Race) GetBuyos(context Context, start latlon.LatLon) []Buoy {
 	var buoys []Buoy
 	for id, w := range race.Waypoints {
 		if w.Validated {
@@ -126,19 +128,19 @@ func (d Door) id() uint8 {
 	return d.Id
 }
 
-func (wp Waypoint) destination() LatLon {
+func (wp Waypoint) destination() latlon.LatLon {
 	return wp.Destination
 }
 
-func (d Door) destination() LatLon {
+func (d Door) destination() latlon.LatLon {
 	return d.Destination
 }
 
-func (wp Waypoint) departure() LatLon {
+func (wp Waypoint) departure() latlon.LatLon {
 	return wp.Destination
 }
 
-func (d Door) departure() LatLon {
+func (d Door) departure() latlon.LatLon {
 	return d.Departure
 }
 

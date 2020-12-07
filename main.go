@@ -1,174 +1,28 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
-	"log"
 	"net/http"
 	"os"
 
-	//"runtime"
-
-	"sync"
-	"time"
-
-	"github.com/gorilla/mux"
-	"github.com/jasonlvhit/gocron"
 	"github.com/peterbourgon/ff"
+	log "github.com/sirupsen/logrus"
 
+	"github.com/a-bouts/nav-server/api"
+	"github.com/a-bouts/nav-server/land"
 	"github.com/a-bouts/nav-server/wind"
 	"github.com/a-bouts/nav-server/xmpp"
 
 	_ "net/http/pprof"
 )
 
-type GoNav struct {
-	Expes       map[string]bool `json:"expes"`
-	Start       LatLon          `json:"start"`
-	Bearing     int             `json:"bearing"`
-	CurrentSail byte            `json:"currentSail"`
-	Race        Race            `json:"race"`
-	Delta       float64         `json:"delta"`
-	MaxDuration float64         `json:"maxDuration"`
-	Delay       float64         `json:"delay"`
-	StartTime   time.Time       `json:"startTime"`
-	Sail        int             `json:"sail"`
-	Foil        bool            `json:"foil"`
-	Hull        bool            `json:"hull"`
-	Winch       bool            `json:"winch"`
-	Malus       float64         `json:"malus"`
-	Stop        bool            `json:"stop"`
-}
-
-func Expes(w http.ResponseWriter, req *http.Request) {
-
-	expes := []string{
-		"new-polars",
-		"progressive-intervales",
-		"sqrt-dist-from",
-		"optim",
-		"max-dist",
-		"alternatives",
-		"vent1",
-		"vent2",
-		"vent3",
-		"vent4",
-	}
-
-	json.NewEncoder(w).Encode(expes)
-}
-
-func Refresh(w http.ResponseWriter, req *http.Request) {
-
-	go UpdateWinds()
-}
-
-func Navigate(w http.ResponseWriter, req *http.Request) {
-	//runtime.SetCPUProfileRate(300)
-	//defer profile.Start().Stop()
-	//defer profile.Start(profile.MemProfile).Stop()
-
-	//params := mux.Vars(req)
-	var gonav GoNav
-	_ = json.NewDecoder(req.Body).Decode(&gonav)
-
-	logger.infof("Navigate '%s' from '%s' every '%.2f' stop %t\n", gonav.Race.Name, gonav.StartTime.String(), gonav.Delta, gonav.Stop)
-
-	winchMalus := 5.0
-	if gonav.Winch {
-		winchMalus = 1.25
-	}
-
-	start := time.Now()
-
-	deltas := map[int]float64{
-		6:    1.0 / 6.0,
-		12:   0.5,
-		48:   1.0,
-		72:   3.0,
-		9999: 6.0}
-
-	isos := Run(gonav.Expes, &l, winds, &x, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, deltas, gonav.MaxDuration, gonav.StartTime, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, gonav.Stop, positionPool)
-
-	delta := time.Now().Sub(start)
-	logger.infoln("Navigation took", delta)
-
-	json.NewEncoder(w).Encode(isos)
-}
-
-func BoatLines(w http.ResponseWriter, req *http.Request) {
-	var gonav GoNav
-	_ = json.NewDecoder(req.Body).Decode(&gonav)
-
-	logger.infof("Boatlines '%s' every '%.2f'\n", gonav.Race.Name, gonav.Delta)
-
-	winchMalus := 5.0
-	if gonav.Winch {
-		winchMalus = 1.25
-	}
-
-	start := time.Now()
-
-	lines := GetBoatLines(gonav.Expes, winds, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, 1.0, gonav.StartTime, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, positionPool)
-
-	delta := time.Now().Sub(start)
-	logger.infoln("Boatlines took", delta)
-
-	json.NewEncoder(w).Encode(lines)
-}
-
-func TestLand(w http.ResponseWriter, req *http.Request) {
-	isos := RunTestIsLand(&l)
-
-	json.NewEncoder(w).Encode(isos)
-}
-
-func Healthz(w http.ResponseWriter, req *http.Request) {
-	type health struct {
-		Status string `json:"status"`
-	}
-
-	json.NewEncoder(w).Encode(health{Status: "Ok"})
-}
-
-var l Land
-var winds map[string][]*wind.Wind
-var x xmpp.Xmpp
-var lock = sync.RWMutex{}
-var positionPool *sync.Pool
-
-var logger *Logger
-
-func LoadWinds() {
-	logger.infoln("Load winds")
-	lock.Lock()
-	winds = wind.LoadAll2()
-	lock.Unlock()
-
-	/*    for d := 0 ; d < 6 ; d++ {
-	          Run(&l, winds, &x, LatLon{Lat: 40.430225, Lon: -73.9064}, 57, 1, load(), 3, 480, d, 7, true, true, 5.0, 1, false)
-	      }
-	      for d := 6 ; d < 36 ; d+=6 {
-	          Run(&l, winds, &x, LatLon{Lat: 40.430225, Lon: -73.9064}, 57, 1, load(), 3, 480, d, 7, true, true, 5.0, 1, false)
-	      }
-	      for d := 36 ; d < 192 ; d+=24 {
-	          Run(&l, winds, &x, LatLon{Lat: 40.430225, Lon: -73.9064}, 57, 1, load(), 3, 480, d, 7, true, true, 5.0, 1, false)
-	      }
-	*/
-}
-
-func UpdateWinds() {
-	lock.Lock()
-	wind.Merge(winds)
-	lock.Unlock()
-}
-
 func main() {
 
-	logger = &Logger{debug: true}
-
-	fs := flag.NewFlagSet("nav-server", flag.ExitOnError)
+	fs := flag.NewFlagSet("start", flag.ExitOnError)
 	var (
+		debug      = fs.Bool("debug", false, "")
+		cpuprofile = fs.Bool("cpuprofile", false, "")
+
 		xmppHost     = fs.String("xmpp-host", "", "")
 		xmppJid      = fs.String("xmpp-jid", "", "")
 		xmppPassword = fs.String("xmpp-password", "", "")
@@ -176,43 +30,30 @@ func main() {
 	)
 	ff.Parse(fs, os.Args[1:], ff.WithEnvVarNoPrefix())
 
-	flag.Parse()
+	log.SetOutput(os.Stdout)
+	log.SetFormatter(&log.TextFormatter{
+		FullTimestamp:          true,
+		DisableLevelTruncation: true,
+		PadLevelText:           true,
+	})
 
-	positionPool = &sync.Pool{
-		New: func() interface{} {
-			return new(Position)
-		},
+	if *debug {
+		log.SetLevel(log.DebugLevel)
 	}
 
-	x = xmpp.Xmpp{Config: xmpp.Config{Host: *xmppHost, Jid: *xmppJid, Password: *xmppPassword, To: *xmppTo}}
+	x := &xmpp.Xmpp{Config: xmpp.Config{Host: *xmppHost, Jid: *xmppJid, Password: *xmppPassword, To: *xmppTo}}
 
-	logger.infoln("Load lands")
-	l = InitLand()
+	log.Info("Load lands")
+	l, err := land.InitLand()
+	if err != nil {
+		log.Fatal("Error loading lands")
+	}
 
-	LoadWinds()
+	log.Info("Load winds")
+	w := wind.InitWinds()
 
-	s := gocron.NewScheduler()
-	jobxx := s.Every(15).Seconds()
-	jobxx.Do(UpdateWinds)
-	//    job04 := s.Every(1).Day().At("05:00")
-	//    job04.Do(LoadWinds)
-	//    job10 := s.Every(1).Day().At("11:00")
-	//    job10.Do(LoadWinds)
-	//    job16 := s.Every(1).Day().At("17:00")
-	//    job16.Do(LoadWinds)
-	//    job22 := s.Every(1).Day().At("23:00")
-	//    job22.Do(LoadWinds)
-	go s.Start()
+	router := api.InitServer(*cpuprofile, l, w, x)
 
-	logger.infoln("Start server")
-
-	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/private/nav/run", Navigate).Methods("POST")
-	router.HandleFunc("/private/nav/refresh", Refresh).Methods("GET")
-	router.HandleFunc("/private/nav/expes", Expes).Methods("GET")
-	router.HandleFunc("/private/nav/test", TestLand).Methods("POST")
-	router.HandleFunc("/private/nav/boatlines", BoatLines).Methods("POST")
-	router.HandleFunc("/private/nav/-/healthz", Healthz).Methods("GET")
+	log.Println("Start server on port 8888")
 	log.Fatal(http.ListenAndServe(":8888", router))
-
 }

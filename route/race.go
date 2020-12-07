@@ -1,31 +1,33 @@
-package main
+package route
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+
+	"github.com/a-bouts/nav-server/latlon"
 )
 
 type RaceWaypoint struct {
-	Name      string        `json:"name"`
-	Latlons   []LatLon      `json:"latlons"`
-	Validated bool          `json:"validated"`
-	ToAvoid   [][][]float64 `json:"toAvoid"`
-	Radius    int           `json:"radius"`
+	Name      string          `json:"name"`
+	Latlons   []latlon.LatLon `json:"latlons"`
+	Validated bool            `json:"validated"`
+	ToAvoid   [][][]float64   `json:"toAvoid"`
+	Radius    int             `json:"radius"`
 }
 
 type IceLimits struct {
-	North  []LatLon `json:"north"`
-	South  []LatLon `json:"south"`
-	MaxLat int      `json:"maxLat"`
-	MinLat int      `json:"minLat"`
+	North  []latlon.LatLon `json:"north"`
+	South  []latlon.LatLon `json:"south"`
+	MaxLat int             `json:"maxLat"`
+	MinLat int             `json:"minLat"`
 }
 
 type Race struct {
 	Name      string         `json:"name"`
 	Polars    string         `json:"polars"`
 	Boat      string         `json:"boat"`
-	Start     LatLon         `json:"start"`
+	Start     latlon.LatLon  `json:"start"`
 	Waypoints []RaceWaypoint `json:"waypoints"`
 	IceLimits IceLimits      `json:"ice_limits"`
 }
@@ -35,7 +37,7 @@ type Races struct {
 }
 
 func test() {
-	r := Race{Name: "test", Start: LatLon{Lat: 12.2, Lon: 14.3}}
+	r := Race{Name: "test", Start: latlon.LatLon{Lat: 12.2, Lon: 14.3}}
 	emp, _ := json.Marshal(r)
 	var rs Race
 	json.Unmarshal(emp, &rs)
@@ -66,7 +68,7 @@ func (r Race) Reached(index int) int {
 	return index + 1
 }
 
-func (iceLimits *IceLimits) isInIceLimits(latLon *LatLon) bool {
+func (iceLimits *IceLimits) isInIceLimits(latLon *latlon.LatLon) bool {
 
 	lon := latLon.Lon
 	if lon > 180 {
@@ -83,7 +85,7 @@ func (iceLimits *IceLimits) isInIceLimits(latLon *LatLon) bool {
 	if latLon.Lat > 0.0 {
 		for i := 0; i < len(iceLimits.North)-1; i++ {
 			if lon >= iceLimits.North[i].Lon && lon <= iceLimits.North[i+1].Lon {
-				lat := (lon - iceLimits.North[i].Lon)/(iceLimits.North[i+1].Lon-iceLimits.North[i].Lon)*(iceLimits.North[i+1].Lat-iceLimits.North[i].Lat) + iceLimits.North[i].Lat
+				lat := (lon-iceLimits.North[i].Lon)/(iceLimits.North[i+1].Lon-iceLimits.North[i].Lon)*(iceLimits.North[i+1].Lat-iceLimits.North[i].Lat) + iceLimits.North[i].Lat
 				if latLon.Lat >= lat {
 					return true
 				}
@@ -93,7 +95,7 @@ func (iceLimits *IceLimits) isInIceLimits(latLon *LatLon) bool {
 	} else {
 		for i := 0; i < len(iceLimits.South)-1; i++ {
 			if lon >= iceLimits.South[i].Lon && lon <= iceLimits.South[i+1].Lon {
-				lat := (lon - iceLimits.South[i].Lon)/(iceLimits.South[i+1].Lon-iceLimits.South[i].Lon)*(iceLimits.South[i+1].Lat-iceLimits.South[i].Lat) + iceLimits.South[i].Lat
+				lat := (lon-iceLimits.South[i].Lon)/(iceLimits.South[i+1].Lon-iceLimits.South[i].Lon)*(iceLimits.South[i+1].Lat-iceLimits.South[i].Lat) + iceLimits.South[i].Lat
 				if latLon.Lat <= lat {
 					return true
 				}
