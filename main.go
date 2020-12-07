@@ -56,7 +56,7 @@ func Refresh(w http.ResponseWriter, req *http.Request) {
 
 func Navigate(w http.ResponseWriter, req *http.Request) {
 	//runtime.SetCPUProfileRate(300)
-	//defer profile.Start().Stop()
+	defer profile.Start().Stop()
 	//defer profile.Start(profile.MemProfile).Stop()
 
 	//params := mux.Vars(req)
