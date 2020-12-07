@@ -131,7 +131,7 @@ func foil2(boat Boat2, twa float64, ws float64) float64 {
 	return 1.0 + (boat.Foil.SpeedRatio-1)*ct*cv
 }
 
-func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat, isInIceLimits bool) (float64, byte, int) {
+func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat, isInIceLimits bool) (float64, byte, uint8) {
 	// convert m/s to kts
 	ws = ws * 1.9438444924406
 
@@ -187,5 +187,5 @@ func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat, isInIceLim
 	// }
 	//
 
-	return maxBs, maxS, int(math.Round((f - 1.0) * 100 / (boat.Foil.SpeedRatio - 1)))
+	return maxBs, maxS, uint8(math.Round((f - 1.0) * 100 / (boat.Foil.SpeedRatio - 1)))
 }

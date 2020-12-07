@@ -14,17 +14,17 @@ type BoatLine struct {
 	Line []LatLon `json:"line"`
 }
 
-func GetBoatLines(expes map[string]bool, winds map[string][]*wind.Wind, start LatLon, bearing int, currentSail byte, race Race, delta float64, startTime time.Time, sail int, foil bool, hull bool, winchMalus float64) []map[int](*BoatLine) {
+func GetBoatLines(expes map[string]bool, winds map[string][]*wind.Wind, start LatLon, bearing int, currentSail byte, race Race, delta float64, startTime time.Time, sail int, foil bool, hull bool, winchMalus float64, positionPool *sync.Pool) []map[int](*BoatLine) {
 
 	context := Context{
 		expes:      expes,
 		boat:       polar.Boat{Foil: foil, Hull: hull},
 		winchMalus: winchMalus,
-		positionPool: sync.Pool{
-			New: func() interface{} {
-				return new(Position)
-			},
-		}}
+		//positionProvider: positionProviderNew{},
+		positionProvider: positionProviderPool{
+			pool: positionPool,
+		},
+	}
 
 	var z polar.Polar
 	z = polar.Init(polar.Options{Race: race.Polars, Sail: sail})
@@ -76,6 +76,7 @@ func BearingLine(context *Context, winds map[string][]*wind.Wind, start LatLon, 
 			wb, ws := wind.Interpolate(w, w1, src.Lat, src.Lon, x, 0)
 
 			_, pos := jump(context, &Position{Latlon: start}, nil, hops[b], float64(b), wb, ws, delta, 1, nil, false)
+			context.positionProvider.put(hops[b])
 
 			result[b].Line = append(result[b].Line, pos.Latlon)
 			hops[b] = pos
@@ -131,6 +132,7 @@ func TwaLine(context Context, winds map[string][]*wind.Wind, start LatLon, beari
 			}
 
 			_, pos := jump(&context, &Position{Latlon: start}, nil, hops[b], bearing, wb, ws, delta, 1, nil, false)
+			context.positionProvider.put(hops[b])
 
 			result[b].Line = append(result[b].Line, pos.Latlon)
 			hops[b] = pos

@@ -52,7 +52,7 @@ func Merge(winds map[string][]*Wind) error {
 		}
 	}
 	for _, k := range toRemove {
-		fmt.Println("Remove from winds", k)
+		log.Println("Remove from winds", k)
 		delete(winds, k)
 	}
 
@@ -99,7 +99,7 @@ func Merge(winds map[string][]*Wind) error {
 
 		_, found := forecasts[forecastHour]
 
-		//quand c'est la prévision courante, on la conserve meme si une nouvelle prévision est arrivé
+		//quand c'est la prévision précédente, on la conserve meme si une nouvelle prévision est arrivé
 		if !found || forecastHour >= 0 {
 			forecasts[forecastHour] = append(forecasts[forecastHour], f)
 		}
@@ -125,9 +125,13 @@ func Merge(winds map[string][]*Wind) error {
 				}
 			}
 
-			wind := Init(date, file)
-			fmt.Println("Init", sdate, wind.File)
-			winds[sdate] = append(winds[sdate], &wind)
+			wind, err := Init(date, file)
+			if err != nil {
+				log.Println("Error loading grib file", file, err)
+			} else {
+				log.Println("Init", sdate, wind.File)
+				winds[sdate] = append(winds[sdate], &wind)
+			}
 		}
 	}
 
@@ -158,7 +162,7 @@ func LoadAll2() map[string][]*Wind {
 
 		d := strings.Split(f, ".")[0]
 
-		fmt.Println(f)
+		log.Println(f)
 
 		h, err := strconv.Atoi(strings.Split(f, ".")[1][1:])
 		if err != nil {
@@ -199,9 +203,13 @@ func LoadAll2() map[string][]*Wind {
 			f, _ := strconv.Atoi(strings.Split(file, ".")[1][1:])
 			date = date.Add(time.Hour * time.Duration(f))
 			sdate := date.Format("2006010215")
-			wind := Init(date, file)
-			fmt.Println("Init", sdate, wind.File)
-			winds[sdate] = append(winds[sdate], &wind)
+			wind, err := Init(date, file)
+			if err != nil {
+				log.Println("Error loading grib file", file, err)
+			} else {
+				log.Println("Init", sdate, wind.File)
+				winds[sdate] = append(winds[sdate], &wind)
+			}
 		}
 	}
 	return winds
@@ -210,7 +218,7 @@ func LoadAll2() map[string][]*Wind {
 func load(winds map[string]Wind, m time.Time) bool {
 	stamp := m.Format("20060102") + roundHours(m.Hour(), 6)
 
-	fmt.Println("Load forecast", stamp)
+	log.Println("Load forecast", stamp)
 
 	//load json file
 	content, err := ioutil.ReadFile("json-data/" + stamp + ".json")
@@ -225,9 +233,13 @@ func load(winds map[string]Wind, m time.Time) bool {
 		sdate := date.Format("2006010215")
 		_, exists := winds[sdate]
 		if !exists {
-			wind := Init(date, stamp+".f"+fmt.Sprintf("%03d", f))
-			fmt.Println("Init", sdate, wind.File)
-			winds[sdate] = wind
+			wind, err := Init(date, stamp+".f"+fmt.Sprintf("%03d", f))
+			if err != nil {
+				log.Println("Error loading grib file", wind.File, err)
+			} else {
+				log.Println("Init", sdate, wind.File)
+				winds[sdate] = wind
+			}
 		}
 	}
 	return true
@@ -277,10 +289,13 @@ func (w Wind) buildGrid(data []float64) [][]float64 {
 	return grid
 }
 
-func Init(date time.Time, file string) Wind {
+func Init(date time.Time, file string) (Wind, error) {
 	w := Wind{Date: date, File: file}
 	gribfile, _ := os.Open("grib-data/" + file)
-	messages, _ := griblib.ReadMessages(gribfile)
+	messages, err := griblib.ReadMessages(gribfile)
+	if err != nil {
+		return w, err
+	}
 	for _, message := range messages {
 		if message.Section0.Discipline == uint8(0) && message.Section4.ProductDefinitionTemplate.ParameterCategory == uint8(2) && message.Section4.ProductDefinitionTemplate.FirstSurface.Type == 103 && message.Section4.ProductDefinitionTemplate.FirstSurface.Value == 10 {
 			grid0, _ := message.Section3.Definition.(*griblib.Grid0)
@@ -297,7 +312,7 @@ func Init(date time.Time, file string) Wind {
 			}
 		}
 	}
-	return w
+	return w, nil
 }
 
 func floorMod(a float64, n float64) float64 {

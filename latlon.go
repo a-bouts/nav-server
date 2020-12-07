@@ -15,7 +15,7 @@ type LatLonInterface interface {
 type LatLon struct {
 	Lat float64 `json:"lat"`
 	Lon float64 `json:"lon"`
-	LatLonSpherical
+	//LatLonSpherical
 }
 
 func toRadians(a float64) float64 {

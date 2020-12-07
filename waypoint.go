@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"math"
 )
 
 type Door struct {
+	Id          uint8
 	Name        string
 	Destination LatLon
 	Departure   LatLon
@@ -21,6 +21,7 @@ type Reachers struct {
 }
 
 type Waypoint struct {
+	Id          uint8
 	Name        string
 	Destination LatLon
 	ToAvoid     [][][]float64
@@ -30,6 +31,7 @@ type Waypoint struct {
 
 type Buoy interface {
 	buoyType() string
+	id() uint8
 	name() string
 	destination() LatLon
 	departure() LatLon
@@ -42,13 +44,14 @@ type Buoy interface {
 
 func (race *Race) GetBuyos(context Context, start LatLon) []Buoy {
 	var buoys []Buoy
-	for _, w := range race.Waypoints {
+	for id, w := range race.Waypoints {
 		if w.Validated {
 			continue
 		}
 
 		if len(w.Latlons) == 1 {
 			buoys = append(buoys, &Waypoint{
+				Id:          uint8(id),
 				Name:        w.Name,
 				Destination: w.Latlons[0],
 				ToAvoid:     w.ToAvoid,
@@ -67,6 +70,7 @@ func (race *Race) GetBuyos(context Context, start LatLon) []Buoy {
 			departure := context.Destination(w.Latlons[0], a, math.Sqrt(d*d/2))
 
 			buoys = append(buoys, &Door{
+				Id:          uint8(id),
 				Name:        w.Name,
 				Destination: destination,
 				Departure:   departure,
@@ -95,10 +99,6 @@ func (race *Race) GetBuyos(context Context, start LatLon) []Buoy {
 		b.setFactor(factor)
 	}
 
-	for _, b := range buoys {
-		fmt.Println("Buoy", b)
-	}
-
 	return buoys
 }
 
@@ -116,6 +116,14 @@ func (wp Waypoint) name() string {
 
 func (d Door) name() string {
 	return d.Name
+}
+
+func (wp Waypoint) id() uint8 {
+	return wp.Id
+}
+
+func (d Door) id() uint8 {
+	return d.Id
 }
 
 func (wp Waypoint) destination() LatLon {
@@ -196,27 +204,23 @@ func (d *Door) reach(context *Context, alt *Alternative) {
 	if !found || last[a].getBest().fromDist < dist {
 		last[a] = &Alternative{
 			best: alt.best}
-		p := context.positionPool.Get().(*Position)
-		p.clear()
-
+		p := &Position{
+			Latlon:           pos.Latlon,
+			fromDist:         dist,
+			bearing:          pos.bearing,
+			twa:              pos.twa,
+			wind:             pos.wind,
+			windSpeed:        pos.windSpeed,
+			boatSpeed:        pos.boatSpeed,
+			sail:             pos.sail,
+			foil:             pos.foil,
+			distTo:           0,
+			previousWindLine: pos.previousWindLine,
+			duration:         pos.duration,
+			navDuration:      pos.navDuration,
+			isLand:           pos.isLand,
+			change:           pos.change,
+			reached:          false}
 		last[a].alternatives[alt.best] = p
-		p.Latlon = pos.Latlon
-		p.az = a
-		p.fromDist = dist
-		p.bearing = pos.bearing
-		p.twa = pos.twa
-		p.wind = pos.wind
-		p.windSpeed = pos.windSpeed
-		p.boatSpeed = pos.boatSpeed
-		p.sail = pos.sail
-		p.foil = pos.foil
-		p.distTo = 0
-		p.previousWindLine = pos.previousWindLine
-		p.duration = pos.duration
-		p.navDuration = pos.navDuration
-		p.isLand = pos.isLand
-		p.bonus = pos.bonus
-		p.change = pos.change
-		p.reached = false
 	}
 }

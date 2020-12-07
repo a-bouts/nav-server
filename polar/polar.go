@@ -7,7 +7,7 @@ import (
 )
 
 type Polar interface {
-	GetBoatSpeed(twa float64, ws float64, boat Boat, isInIceLimits bool) (float64, byte, int)
+	GetBoatSpeed(twa float64, ws float64, boat Boat, isInIceLimits bool) (float64, byte, uint8)
 }
 
 type Zezo struct {
@@ -44,11 +44,11 @@ func Init(o Options) Zezo {
 	return z
 }
 
-func (z Zezo) GetBoatSpeed(twa float64, ws float64, boat Boat, isInIceLimits bool) (float64, byte, int) {
+func (z Zezo) GetBoatSpeed(twa float64, ws float64, boat Boat, isInIceLimits bool) (float64, byte, uint8) {
 	return z.GetBoatSpeed2(twa, ws*3.6, boat, z.options.Sail, isInIceLimits)
 }
 
-func (z Zezo) GetOptimBoatSpeed(twa float64, ws float64, boat Boat, s byte, winchMalus float64) (float64, byte, int) {
+func (z Zezo) GetOptimBoatSpeed(twa float64, ws float64, boat Boat, s byte, winchMalus float64) (float64, byte, uint8) {
 	o := 0
 	if s == 2 || s == 3 {
 		o = 1
@@ -78,7 +78,7 @@ func (z Zezo) GetOptimBoatSpeed(twa float64, ws float64, boat Boat, s byte, winc
 	}
 }
 
-func (z Zezo) GetBoatSpeed2(twa float64, ws float64, boat Boat, s int, isInIceLimits bool) (float64, byte, int) {
+func (z Zezo) GetBoatSpeed2(twa float64, ws float64, boat Boat, s int, isInIceLimits bool) (float64, byte, uint8) {
 	p := z.polar_data[s]
 	t := twa
 	if t < 0 {
@@ -111,7 +111,7 @@ func (z Zezo) GetBoatSpeed2(twa float64, ws float64, boat Boat, s int, isInIceLi
 	if boat.Hull {
 		retbs *= 1.003
 	}
-	return retbs, sail, int(math.Round((f - 1.0) * 100 / 0.04))
+	return retbs, sail, uint8(math.Round((f - 1.0) * 100 / 0.04))
 }
 
 func foil(twa, ws float64) float64 {
