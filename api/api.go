@@ -146,7 +146,7 @@ func (s *server) sneak(w http.ResponseWriter, req *http.Request) {
 	var r model.Route
 	_ = json.NewDecoder(req.Body).Decode(&r)
 
-	log.Infof("Sneak '%s' every '%.2f'\n", r.Race.Name, r.Params.Delta)
+	log.Infof("Sneak '%s' for %d hours\n", r.Race.Name, int(r.Params.MaxDuration))
 
 	start := time.Now()
 

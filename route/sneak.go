@@ -19,6 +19,12 @@ type Sneak struct {
 
 func EvalSneak(route model.Route, winds *wind.Winds, positionPool *sync.Pool) Sneak {
 
+	if route.Params.MaxDuration > 72 {
+		route.Params.MaxDuration = 72
+	} else if route.Params.MaxDuration == 0 {
+		route.Params.MaxDuration = 24
+	}
+
 	winchMalus := 5.0
 	if route.Options.Winch {
 		winchMalus = 1.25
@@ -97,7 +103,7 @@ func BearingSneak(context *Context, winds *wind.Winds) map[int]([]*WindLinePosit
 		hops[b] = &pos
 	}
 
-	for ok := true; ok; ok = duration < 72.0 {
+	for ok := true; ok; ok = duration < context.route.Params.MaxDuration {
 
 		for b := 0; b < 360; b++ {
 			src := result[b][len(result[b])-1]
@@ -170,7 +176,7 @@ func TwaSneak(context Context, winds *wind.Winds) map[int]([]*WindLinePosition) 
 		hops[b] = &pos
 	}
 
-	for ok := true; ok; ok = duration < 72.0 {
+	for ok := true; ok; ok = duration < context.route.Params.MaxDuration {
 
 		for b := 0; b < 360; b++ {
 			src := result[b][len(result[b])-1]
