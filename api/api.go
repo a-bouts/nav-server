@@ -144,7 +144,7 @@ func (s *server) sneak(w http.ResponseWriter, req *http.Request) {
 
 	start := time.Now()
 
-	lines := route.GetBoatLines(r, s.w, s.positionPool)
+	lines := route.EvalSneak(r, s.w, s.positionPool)
 
 	delta := time.Now().Sub(start)
 	log.Infof("Sneak took %s", delta.String())
