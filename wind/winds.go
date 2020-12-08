@@ -14,8 +14,23 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type ForecastWinds []*Wind
+
+func (w ForecastWinds) String() string {
+	res := ""
+	if w == nil || len(w) == 0 {
+		return res
+	}
+	res += w[0].Date.Format("2006010215") + "(" + w[0].File
+	if len(w) > 1 {
+		res += "," + w[1].File
+	}
+	res += ")"
+	return res
+}
+
 type Winds struct {
-	winds map[string][]*Wind
+	winds map[string](ForecastWinds)
 	lock  sync.RWMutex
 }
 
@@ -34,7 +49,7 @@ func InitWinds() *Winds {
 	return w
 }
 
-func (w *Winds) FindWinds(m time.Time) ([]*Wind, []*Wind, float64) {
+func (w *Winds) FindWinds(m time.Time) (ForecastWinds, ForecastWinds, float64) {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 
@@ -156,8 +171,8 @@ func (w *Winds) Merge() error {
 	return nil
 }
 
-func LoadAll() map[string][]*Wind {
-	winds := make(map[string][]*Wind)
+func LoadAll() map[string](ForecastWinds) {
+	winds := make(map[string](ForecastWinds))
 	var files []string
 	err := filepath.Walk("grib-data/", func(path string, info os.FileInfo, err error) error {
 		if err != nil {

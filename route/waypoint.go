@@ -44,9 +44,9 @@ type Buoy interface {
 	reach(context *Context, alt *Alternative)
 }
 
-func (race *Race) GetBuyos(context Context, start latlon.LatLon) []Buoy {
+func GetBuyos(context Context) []Buoy {
 	var buoys []Buoy
-	for id, w := range race.Waypoints {
+	for id, w := range context.route.Race.Waypoints {
 		if w.Validated {
 			continue
 		}
@@ -84,7 +84,7 @@ func (race *Race) GetBuyos(context Context, start latlon.LatLon) []Buoy {
 	}
 
 	for i, b := range buoys {
-		from := start
+		from := context.route.Start
 		if i > 0 {
 			from = buoys[i-1].departure()
 		}

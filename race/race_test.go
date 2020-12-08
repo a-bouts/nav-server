@@ -1,4 +1,4 @@
-package route
+package race
 
 import (
 	"testing"
@@ -188,12 +188,12 @@ func TestIsInIceLimits(t *testing.T) {
 		MaxLat: 90.0,
 		MinLat: 90.0}
 
-	ice := iceLimits.isInIceLimits(&latlon.LatLon{Lat: -50.0, Lon: 30.0})
+	ice := iceLimits.IsInIceLimits(&latlon.LatLon{Lat: -50.0, Lon: 30.0})
 	if !ice {
 		t.Errorf("isInIceLimits(-50, 30) = (%t); want (true)", ice)
 	}
 
-	ice = iceLimits.isInIceLimits(&latlon.LatLon{Lat: -60.0, Lon: 70.0})
+	ice = iceLimits.IsInIceLimits(&latlon.LatLon{Lat: -60.0, Lon: 70.0})
 	if !ice {
 		t.Errorf("isInIceLimits(-70, 60) = (%t); want (true)", ice)
 	}

@@ -11,8 +11,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/a-bouts/nav-server/api/model"
 	"github.com/a-bouts/nav-server/land"
 	"github.com/a-bouts/nav-server/latlon"
+	"github.com/a-bouts/nav-server/race"
 	"github.com/a-bouts/nav-server/route"
 	"github.com/a-bouts/nav-server/wind"
 	"github.com/a-bouts/nav-server/xmpp"
@@ -46,9 +48,14 @@ func InitServer(cpuprofile bool, l *land.Land, w *wind.Winds, x *xmpp.Xmpp) *mux
 	api := router.PathPrefix("/").Subrouter()
 
 	api.HandleFunc("/nav/-/healthz", s.healthz).Methods(http.MethodGet)
-	api.HandleFunc("/nav/run", s.route).Methods("POST")
+	api.HandleFunc("/nav/run", s.routeOld).Methods("POST")
 	api.HandleFunc("/nav/expes", s.getExpes).Methods("GET")
-	api.HandleFunc("/nav/boatlines", s.sneak).Methods("POST")
+	api.HandleFunc("/nav/boatlines", s.sneakOld).Methods("POST")
+
+	apiV1 := router.PathPrefix("/route/api/v1").Subrouter()
+	apiV1.HandleFunc("/route", s.route).Methods("POST")
+	apiV1.HandleFunc("/expes", s.getExpes).Methods("GET")
+	apiV1.HandleFunc("/sneak", s.sneak).Methods("POST")
 
 	return router
 }
@@ -84,7 +91,7 @@ type GoNav struct {
 	Start       latlon.LatLon   `json:"start"`
 	Bearing     int             `json:"bearing"`
 	CurrentSail byte            `json:"currentSail"`
-	Race        route.Race      `json:"race"`
+	Race        race.Race       `json:"race"`
 	Delta       float64         `json:"delta"`
 	MaxDuration float64         `json:"maxDuration"`
 	Delay       int             `json:"delay"`
@@ -112,15 +119,10 @@ func (s *server) route(w http.ResponseWriter, req *http.Request) {
 	}
 	requestLogger := log.WithFields(fields)
 
-	var gonav GoNav
-	_ = json.NewDecoder(req.Body).Decode(&gonav)
+	var r model.Route
+	_ = json.NewDecoder(req.Body).Decode(&r)
 
-	requestLogger.Infof("Route '%s' from '%s' every '%.2f' stop %t\n", gonav.Race.Name, gonav.StartTime.String(), gonav.Delta, gonav.Stop)
-
-	winchMalus := 5.0
-	if gonav.Winch {
-		winchMalus = 1.25
-	}
+	requestLogger.Infof("Route '%s' from '%s' every '%.2f' stop %t\n", r.Race.Name, r.StartTime.String(), r.Params.Delta, r.Params.Stop)
 
 	start := time.Now()
 
@@ -131,7 +133,7 @@ func (s *server) route(w http.ResponseWriter, req *http.Request) {
 		72:   3.0,
 		9999: 6.0}
 
-	isos := route.Run(gonav.Expes, s.l, s.w, s.x, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, gonav.Delta, deltas, gonav.MaxDuration, gonav.StartTime, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, gonav.Stop, s.positionPool)
+	isos := route.Run(r, s.l, s.w, s.x, deltas, s.positionPool)
 
 	delta := time.Now().Sub(start)
 	requestLogger.Infof("Route took %s", delta.String())
@@ -141,19 +143,108 @@ func (s *server) route(w http.ResponseWriter, req *http.Request) {
 
 func (s *server) sneak(w http.ResponseWriter, req *http.Request) {
 
-	var gonav GoNav
-	_ = json.NewDecoder(req.Body).Decode(&gonav)
+	var r model.Route
+	_ = json.NewDecoder(req.Body).Decode(&r)
 
-	log.Infof("Sneak '%s' every '%.2f'\n", gonav.Race.Name, gonav.Delta)
-
-	winchMalus := 5.0
-	if gonav.Winch {
-		winchMalus = 1.25
-	}
+	log.Infof("Sneak '%s' every '%.2f'\n", r.Race.Name, r.Params.Delta)
 
 	start := time.Now()
 
-	lines := route.GetBoatLines(gonav.Expes, s.w, gonav.Start, gonav.Bearing, gonav.CurrentSail, gonav.Race, 1.0, gonav.StartTime, gonav.Sail, gonav.Foil, gonav.Hull, winchMalus, s.positionPool)
+	lines := route.EvalSneak(r, s.w, s.positionPool)
+
+	delta := time.Now().Sub(start)
+	log.Infof("Sneak took %s", delta.String())
+
+	json.NewEncoder(w).Encode(lines)
+}
+
+func (s *server) routeOld(w http.ResponseWriter, req *http.Request) {
+	if s.cpuprofile {
+		//runtime.SetCPUProfileRate(300)
+		defer profile.Start().Stop()
+	}
+	//defer profile.Start(profile.MemProfile).Stop()
+
+	fields := log.Fields{
+		"action": "route",
+	}
+	if ip, err := getIp(req); err == nil {
+		fields["IP"] = ip
+	}
+	requestLogger := log.WithFields(fields)
+
+	var gonav GoNav
+	_ = json.NewDecoder(req.Body).Decode(&gonav)
+
+	r := model.Route{
+		Params: model.Params{
+			Expes:       gonav.Expes,
+			Stop:        gonav.Stop,
+			Delta:       gonav.Delta,
+			MaxDuration: gonav.MaxDuration,
+		},
+		StartTime:   gonav.StartTime,
+		Start:       gonav.Start,
+		Bearing:     gonav.Bearing,
+		CurrentSail: gonav.CurrentSail,
+		Race:        gonav.Race,
+		Options: model.Options{
+			Sail:  gonav.Sail,
+			Foil:  gonav.Foil,
+			Hull:  gonav.Hull,
+			Winch: gonav.Winch,
+		},
+	}
+
+	requestLogger.Infof("Route '%s' from '%s' every '%.2f' stop %t\n", gonav.Race.Name, gonav.StartTime.String(), gonav.Delta, gonav.Stop)
+
+	start := time.Now()
+
+	deltas := map[int]float64{
+		6:    1.0 / 6.0,
+		12:   0.5,
+		48:   1.0,
+		72:   3.0,
+		9999: 6.0}
+
+	isos := route.Run(r, s.l, s.w, s.x, deltas, s.positionPool)
+
+	delta := time.Now().Sub(start)
+	requestLogger.Infof("Route took %s", delta.String())
+
+	json.NewEncoder(w).Encode(isos)
+}
+
+func (s *server) sneakOld(w http.ResponseWriter, req *http.Request) {
+
+	var gonav GoNav
+	_ = json.NewDecoder(req.Body).Decode(&gonav)
+
+	r := model.Route{
+		Params: model.Params{
+			Expes:       gonav.Expes,
+			Stop:        gonav.Stop,
+			Delta:       gonav.Delta,
+			MaxDuration: gonav.MaxDuration,
+		},
+		StartTime:   gonav.StartTime,
+		Start:       gonav.Start,
+		Bearing:     gonav.Bearing,
+		CurrentSail: gonav.CurrentSail,
+		Race:        gonav.Race,
+		Options: model.Options{
+			Sail:  gonav.Sail,
+			Foil:  gonav.Foil,
+			Hull:  gonav.Hull,
+			Winch: gonav.Winch,
+		},
+	}
+
+	log.Infof("Sneak '%s' every '%.2f'\n", gonav.Race.Name, gonav.Delta)
+
+	start := time.Now()
+
+	lines := route.GetBoatLines(r, s.w, s.positionPool)
 
 	delta := time.Now().Sub(start)
 	log.Infof("Sneak took %s", delta.String())

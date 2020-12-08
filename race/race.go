@@ -1,4 +1,4 @@
-package route
+package race
 
 import (
 	"encoding/json"
@@ -68,7 +68,7 @@ func (r Race) Reached(index int) int {
 	return index + 1
 }
 
-func (iceLimits *IceLimits) isInIceLimits(latLon *latlon.LatLon) bool {
+func (iceLimits *IceLimits) IsInIceLimits(latLon *latlon.LatLon) bool {
 
 	lon := latLon.Lon
 	if lon > 180 {
