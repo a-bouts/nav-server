@@ -2,6 +2,7 @@ package route
 
 import (
 	"fmt"
+	"math"
 	"sync"
 	"time"
 
@@ -11,10 +12,25 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type SnakePosition struct {
+	Lat       float64 `json:"lat"`
+	Lon       float64 `json:"lon"`
+	Twa       float64 `json:"t"`
+	Bearing   int     `json:"b"`
+	Wind      float64 `json:"w"`
+	WindSpeed float64 `json:"ws"`
+	BoatSpeed float64 `json:"bs"`
+	Sail      byte    `json:"s"`
+	Foil      uint8   `json:"f"`
+	Ice       bool    `json:"i"`
+	Duration  float64 `json:"d"`
+	Change    bool    `json:"c"`
+}
+
 type Sneak struct {
-	StartTime time.Time                     `json:"startTime"`
-	Bearing   map[int]([]*WindLinePosition) `json:"bearing"`
-	Twa       map[int]([]*WindLinePosition) `json:"twa"`
+	StartTime time.Time                  `json:"startTime"`
+	Bearing   map[int]([]*SnakePosition) `json:"bearing"`
+	Twa       map[int]([]*SnakePosition) `json:"twa"`
 }
 
 func EvalSneak(route model.Route, winds *wind.Winds, positionPool *sync.Pool) Sneak {
@@ -55,10 +71,10 @@ func EvalSneak(route model.Route, winds *wind.Winds, positionPool *sync.Pool) Sn
 	}
 }
 
-func BearingSneak(context *Context, winds *wind.Winds) map[int]([]*WindLinePosition) {
+func BearingSneak(context *Context, winds *wind.Winds) map[int]([]*SnakePosition) {
 	delta := 1.0
 
-	result := make(map[int]([]*WindLinePosition))
+	result := make(map[int]([]*SnakePosition))
 	var hops [360]*Position
 
 	now := context.route.StartTime.UTC()
@@ -82,10 +98,10 @@ func BearingSneak(context *Context, winds *wind.Winds) map[int]([]*WindLinePosit
 		if pos.twa > 180 {
 			pos.twa = pos.twa - 360
 		}
-		result[b] = []*WindLinePosition{&WindLinePosition{
+		result[b] = []*SnakePosition{&SnakePosition{
 			Lat:      context.route.Start.Lat,
 			Lon:      context.route.Start.Lon,
-			Twa:      pos.twa,
+			Twa: 			toFixed(pos.twa, 1),
 			Bearing:  b,
 			Duration: 0,
 		}}
@@ -102,17 +118,17 @@ func BearingSneak(context *Context, winds *wind.Winds) map[int]([]*WindLinePosit
 			_, pos := jump(context, &Position{Latlon: context.route.Start}, nil, hops[b], float64(b), wb, ws, delta, 1, nil)
 			context.positionProvider.put(hops[b])
 
-			result[b] = append(result[b], &WindLinePosition{
+			result[b] = append(result[b], &SnakePosition{
 				Lat:      pos.Latlon.Lat,
 				Lon:      pos.Latlon.Lon,
 				Bearing:  b,
 				Duration: pos.duration,
 			})
 			src.Bearing = b
-			src.Twa = pos.twa
-			src.Wind = pos.wind
-			src.WindSpeed = pos.windSpeed
-			src.BoatSpeed = pos.boatSpeed
+			src.Twa = toFixed(pos.twa, 1)
+			src.Wind = toFixed(pos.wind, 1)
+			src.WindSpeed = toFixed(pos.windSpeed, 1)
+			src.BoatSpeed = toFixed(pos.boatSpeed, 1)
 			src.Sail = pos.sail
 			src.Foil = pos.foil
 			src.Ice = pos.isInIceLimits
@@ -128,10 +144,10 @@ func BearingSneak(context *Context, winds *wind.Winds) map[int]([]*WindLinePosit
 	return result
 }
 
-func TwaSneak(context Context, winds *wind.Winds) map[int]([]*WindLinePosition) {
+func TwaSneak(context Context, winds *wind.Winds) map[int]([]*SnakePosition) {
 	delta := 1.0
 
-	result := make(map[int]([]*WindLinePosition))
+	result := make(map[int]([]*SnakePosition))
 	var hops [360]*Position
 
 	now := context.route.StartTime.UTC()
@@ -155,10 +171,10 @@ func TwaSneak(context Context, winds *wind.Winds) map[int]([]*WindLinePosition) 
 		if pos.twa > 180 {
 			pos.twa = pos.twa - 360
 		}
-		result[b] = []*WindLinePosition{&WindLinePosition{
+		result[b] = []*SnakePosition{&SnakePosition{
 			Lat:      context.route.Start.Lat,
 			Lon:      context.route.Start.Lon,
-			Twa:      pos.twa,
+			Twa: 			toFixed(pos.twa, 1),
 			Bearing:  b,
 			Duration: 0,
 		}}
@@ -181,17 +197,17 @@ func TwaSneak(context Context, winds *wind.Winds) map[int]([]*WindLinePosition) 
 			_, pos := jump(&context, &Position{Latlon: context.route.Start}, nil, hops[b], bearing, wb, ws, delta, 1, nil)
 			context.positionProvider.put(hops[b])
 
-			result[b] = append(result[b], &WindLinePosition{
+			result[b] = append(result[b], &SnakePosition{
 				Lat:      pos.Latlon.Lat,
 				Lon:      pos.Latlon.Lon,
 				Bearing:  b,
 				Duration: pos.duration,
-				Twa:      pos.twa,
+				Twa: 			toFixed(pos.twa, 1),
 			})
 			src.Bearing = int(bearing)
-			src.Wind = pos.wind
-			src.WindSpeed = pos.windSpeed
-			src.BoatSpeed = pos.boatSpeed
+			src.Wind = toFixed(pos.wind, 1)
+			src.WindSpeed = toFixed(pos.windSpeed, 1)
+			src.BoatSpeed = toFixed(pos.boatSpeed, 1)
 			src.Sail = pos.sail
 			src.Foil = pos.foil
 			src.Ice = pos.isInIceLimits
@@ -205,4 +221,9 @@ func TwaSneak(context Context, winds *wind.Winds) map[int]([]*WindLinePosition) 
 	}
 
 	return result
+}
+
+func toFixed(val float64, n int) float64 {
+	mult := math.Pow10(n)
+	return math.Round(val * mult) / mult
 }
