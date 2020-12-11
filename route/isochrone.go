@@ -534,18 +534,13 @@ func Run(route model.Route, l *land.Land, winds *wind.Winds, xm *xmpp.Xmpp, delt
 		},
 	}
 
-	if context.delta <= 1 {
-		context.route.Params.Expes["progressive-intervales"] = true
-		context.delta = 3
-	}
+	context.delta = 3
 
 	var z polar.Polar
-	z = polar.Init(polar.Options{Race: context.route.Race.Polars, Sail: context.route.Options.Sail})
+	//z = polar.Init(polar.Options{Race: context.route.Race.Polars, Sail: context.route.Options.Sail})
 
-	if context.isExpes("new-polars") {
-		log.Debug("Load new polars")
-		z = polar.Load(polar.Options{Race: context.route.Race.Boat, Sail: context.route.Options.Sail})
-	}
+	log.Debug("Load new polars")
+	z = polar.Load(polar.Options{Race: context.route.Race.Boat, Sail: context.route.Options.Sail})
 
 	context.polar = z
 
@@ -607,20 +602,18 @@ func Run(route model.Route, l *land.Land, winds *wind.Winds, xm *xmpp.Xmpp, delt
 	mustStop := false
 	for ok := true; ok; ok = duration < context.route.Params.MaxDuration && len(buoys) > 0 && !mustStop {
 		d := context.delta
-		if context.isExpes("progressive-intervales") {
 
-			ks := make([]int, len(deltas))
-			kj := 0
-			for k := range deltas {
-				ks[kj] = k
-				kj++
-			}
-			sort.Ints(ks)
-			for _, ke := range ks {
-				if duration < float64(ke) {
-					d = deltas[ke]
-					break
-				}
+		ks := make([]int, len(deltas))
+		kj := 0
+		for k := range deltas {
+			ks[kj] = k
+			kj++
+		}
+		sort.Ints(ks)
+		for _, ke := range ks {
+			if duration < float64(ke) {
+				d = deltas[ke]
+				break
 			}
 		}
 		// if duration < 3 && d > 1 {

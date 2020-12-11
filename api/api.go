@@ -71,8 +71,6 @@ func (s *server) healthz(w http.ResponseWriter, r *http.Request) {
 func (s *server) getExpes(w http.ResponseWriter, req *http.Request) {
 
 	expes := []string{
-		"new-polars",
-		"progressive-intervales",
 		"sqrt-dist-from",
 		"optim",
 		"max-dist"}

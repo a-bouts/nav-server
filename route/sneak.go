@@ -56,12 +56,10 @@ func EvalSneak(route model.Route, winds *wind.Winds, positionPool *sync.Pool) Sn
 	}
 
 	var z polar.Polar
-	z = polar.Init(polar.Options{Race: context.route.Race.Polars, Sail: context.route.Options.Sail})
+	//z = polar.Init(polar.Options{Race: context.route.Race.Polars, Sail: context.route.Options.Sail})
 
-	if context.isExpes("new-polars") {
-		fmt.Println("Load new polars")
-		z = polar.Load(polar.Options{Race: context.route.Race.Boat, Sail: context.route.Options.Sail})
-	}
+	fmt.Println("Load new polars")
+	z = polar.Load(polar.Options{Race: context.route.Race.Boat, Sail: context.route.Options.Sail})
 
 	context.polar = z
 
