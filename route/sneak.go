@@ -91,13 +91,7 @@ func BearingSneak(context *Context, winds *wind.Winds) map[int]([]*SnakePosition
 			Latlon:  context.route.Start,
 			bearing: b,
 			sail:    context.route.CurrentSail}
-		pos.twa = float64(b) - wb
-		if pos.twa < -180 {
-			pos.twa += 360
-		}
-		if pos.twa > 180 {
-			pos.twa = pos.twa - 360
-		}
+		pos.twa = wind.Twa(float64(b), wb)
 		result[b] = []*SnakePosition{&SnakePosition{
 			Lat:      context.route.Start.Lat,
 			Lon:      context.route.Start.Lon,
@@ -164,13 +158,7 @@ func TwaSneak(context Context, winds *wind.Winds) map[int]([]*SnakePosition) {
 			Latlon:  context.route.Start,
 			bearing: b,
 			sail:    context.route.CurrentSail}
-		pos.twa = float64(b) - wb
-		if pos.twa < -180 {
-			pos.twa += 360
-		}
-		if pos.twa > 180 {
-			pos.twa = pos.twa - 360
-		}
+		pos.twa = wind.Twa(float64(b), wb)
 		result[b] = []*SnakePosition{&SnakePosition{
 			Lat:      context.route.Start.Lat,
 			Lon:      context.route.Start.Lon,
@@ -188,10 +176,7 @@ func TwaSneak(context Context, winds *wind.Winds) map[int]([]*SnakePosition) {
 
 			wb, ws := wind.Interpolate(w, w1, src.Lat, src.Lon, x)
 
-			var bearing = src.Twa + wb
-			if bearing > 360 {
-				bearing -= 360
-			}
+			var bearing = wind.Heading(src.Twa, wb)
 
 			log.Tracef("TwaJump from (%f, %f) twa %.2f bearing %.2f, wb %.2f, ws %.2f, delta %.1f", hops[b].Latlon.Lat, hops[b].Latlon.Lon, src.Twa, bearing, wb, ws, delta)
 			_, pos := jump(&context, &Position{Latlon: context.route.Start}, nil, hops[b], bearing, wb, ws, delta, 1, nil)

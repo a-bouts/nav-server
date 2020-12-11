@@ -120,19 +120,8 @@ var cartesian latlon.LatLonHaversine = latlon.LatLonHaversine{}
 func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64, wb float64, ws float64, d float64, factor float64, min *float64) (int, *Position) {
 	change := false
 
-	twa := float64(b) - wb
-	if twa < -180 {
-		twa += 360
-	}
-	if twa > 180 {
-		twa = twa - 360
-	}
+	twa := wind.Twa(b, wb)
 
-	be := int(math.Round(b))
-	diff := int(math.Abs(float64(be - src.bearing)))
-	if diff > 180 {
-		diff = 360 - diff
-	}
 	if false { //context.experiment {
 		if math.Abs(twa) < 30 || math.Abs(twa) > 170 {
 			return 0, nil
@@ -157,7 +146,7 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 
 	}
 
-	to := context.Destination(src.Latlon, float64(b), dist)
+	to := context.Destination(src.Latlon, b, dist)
 	if context.land != nil && context.land.IsLand(to.Lat, to.Lon) {
 		return 0, nil
 	}
@@ -205,13 +194,7 @@ func doorReached(context *Context, start *Position, src *Position, buoy Buoy, wb
 		distToWaypoint -= float64(buoy.radius() * 1852)
 	}
 
-	twa := az12 - wb
-	if twa < -180 {
-		twa += 360
-	}
-	if twa > 180 {
-		twa = 360 - twa
-	}
+	twa := wind.Twa(az12, wb)
 
 	isInIceLimits := src.isInIceLimits
 	boatSpeed, sail, isFoil := context.polar.GetBoatSpeed(twa, ws, context.boat, isInIceLimits)
@@ -600,13 +583,7 @@ func Run(route model.Route, l *land.Land, winds *wind.Winds, xm *xmpp.Xmpp, delt
 	pos.distTo = dist
 
 	wb, _ := wind.Interpolate(w, w1, pos.Latlon.Lat, pos.Latlon.Lon, x)
-	pos.twa = float64(context.route.Bearing) - wb
-	if pos.twa < -180 {
-		pos.twa += 360
-	}
-	if pos.twa > 180 {
-		pos.twa = pos.twa - 360
-	}
+	pos.twa = wind.Twa(float64(context.route.Bearing), wb)
 	az := int(float64(context.route.Bearing) * buoy.getFactor())
 	nav[az] = pos
 
