@@ -217,15 +217,16 @@ func LoadAll() map[string](ForecastWinds) {
 		forecastHour := int(math.Round(t.Sub(time.Now()).Hours()))
 
 		if forecastHour < -3 && cpt < len(files)-1 {
+			log.Debug("Too old")
 			continue
 		}
 
-		_, found := forecasts[forecastHour]
+		//_, found := forecasts[forecastHour]
 
 		//quand c'est la prévision courante, on la conserve meme si une nouvelle prévision est arrivé
-		if !found || forecastHour >= 0 {
-			forecasts[forecastHour] = append(forecasts[forecastHour], f)
-		}
+		//if !found || forecastHour >= 0 {
+		forecasts[forecastHour] = append(forecasts[forecastHour], f)
+		//}
 	}
 
 	var keys []int

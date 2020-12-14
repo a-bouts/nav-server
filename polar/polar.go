@@ -17,7 +17,7 @@ type Zezo struct {
 
 type Options struct {
 	Race string
-	Sail int
+	Sail byte
 }
 
 type Boat struct {
@@ -49,7 +49,7 @@ func (z Zezo) GetBoatSpeed(twa float64, ws float64, boat Boat, isInIceLimits boo
 }
 
 func (z Zezo) GetOptimBoatSpeed(twa float64, ws float64, boat Boat, s byte, winchMalus float64) (float64, byte, uint8) {
-	o := 0
+	var o byte = 0
 	if s == 2 || s == 3 {
 		o = 1
 	}
@@ -78,7 +78,7 @@ func (z Zezo) GetOptimBoatSpeed(twa float64, ws float64, boat Boat, s byte, winc
 	}
 }
 
-func (z Zezo) GetBoatSpeed2(twa float64, ws float64, boat Boat, s int, isInIceLimits bool) (float64, byte, uint8) {
+func (z Zezo) GetBoatSpeed2(twa float64, ws float64, boat Boat, s byte, isInIceLimits bool) (float64, byte, uint8) {
 	p := z.polar_data[s]
 	t := twa
 	if t < 0 {

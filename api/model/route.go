@@ -18,7 +18,7 @@ type Route struct {
 }
 
 type Options struct {
-	Sail  int  `json:"sail"`
+	Sail  byte `json:"sail"`
 	Foil  bool `json:"foil"`
 	Hull  bool `json:"hull"`
 	Winch bool `json:"winch"`
