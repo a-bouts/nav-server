@@ -50,9 +50,10 @@ type Penalty struct {
 }
 
 type Sail struct {
-	Id    int         `json:"id"`
-	Name  string      `json:"name"`
-	Speed [][]float64 `json:"speed"`
+	Id     int         `json:"id"`
+	Name   string      `json:"name"`
+	Speed  [][]float64 `json:"speed"`
+	option byte
 }
 
 func Load(o Options) Boat2 {
@@ -69,6 +70,15 @@ func Load(o Options) Boat2 {
 	err = json.Unmarshal(data, &boat)
 	if err != nil {
 		fmt.Println("error:", err)
+	}
+	for _, sail := range boat.Sail {
+		if sail.Name == "LIGHT_JIB" || sail.Name == "LIGHT_GNK" || sail.Name == "LightJib" || sail.Name == "LightGnk" {
+			sail.option = 1
+		} else if sail.Name == "STAYSAIL" || sail.Name == "HEAVY_GNK" || sail.Name == "Staysail" || sail.Name == "HeavyGnk" {
+			sail.option = 4
+		} else if sail.Name == "CODE_0" || sail.Name == "Code0" {
+			sail.option = 2
+		}
 	}
 	return boat
 }
@@ -135,22 +145,23 @@ func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat, isInIceLim
 
 	twsIndex0, twsIndex1, twsFactor := interpolationIndex(boat.Tws, ws)
 	twaIndex0, twaIndex1, twaFactor := interpolationIndex(boat.Twa, t)
+	unMoinsTwsFactor1 := 1 - twsFactor
+	unMoinsTwaFactor1 := 1 - twaFactor
 
-	maxBs := 0.0
-	maxS := byte(0)
+	var maxBs float64
+	var maxS byte
 
-	for s, sail := range boat.Sail {
-		if (sail.Name == "LightJib" || sail.Name == "LightGnk") && (context.Sails&1) != 1 {
+	l := len(boat.Sail)
+	for s := 0; s < l; s++ {
+
+		sail := &boat.Sail[s]
+		if sail.option&context.Sails != sail.option {
 			continue
 		}
-		if (sail.Name == "Staysail" || sail.Name == "HeavyGnk") && (context.Sails&4) != 4 {
-			continue
-		}
-		if sail.Name == "Code0" && (context.Sails&2) != 2 {
-			continue
-		}
 
-		bs := (sail.Speed[twaIndex0][twsIndex0]*twsFactor+sail.Speed[twaIndex0][twsIndex1]*(1-twsFactor))*twaFactor + (sail.Speed[twaIndex1][twsIndex0]*twsFactor+sail.Speed[twaIndex1][twsIndex1]*(1-twsFactor))*(1-twaFactor)
+		ti0 := sail.Speed[twaIndex0]
+		ti1 := sail.Speed[twaIndex1]
+		bs := (ti0[twsIndex0]*twsFactor+ti0[twsIndex1]*(unMoinsTwsFactor1))*twaFactor + (ti1[twsIndex0]*twsFactor+ti1[twsIndex1]*(unMoinsTwsFactor1))*(unMoinsTwaFactor1)
 
 		if bs > maxBs {
 			maxBs = bs

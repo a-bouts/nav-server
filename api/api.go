@@ -125,7 +125,7 @@ type GoNav struct {
 	MaxDuration float64         `json:"maxDuration"`
 	Delay       int             `json:"delay"`
 	StartTime   time.Time       `json:"startTime"`
-	Sail        int             `json:"sail"`
+	Sail        byte            `json:"sail"`
 	Foil        bool            `json:"foil"`
 	Hull        bool            `json:"hull"`
 	Winch       bool            `json:"winch"`
