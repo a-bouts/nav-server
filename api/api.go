@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -56,8 +57,44 @@ func InitServer(cpuprofile bool, l *land.Land, w *wind.Winds, x *xmpp.Xmpp) *mux
 	apiV1.HandleFunc("/route", s.route).Methods("POST")
 	apiV1.HandleFunc("/expes", s.getExpes).Methods("GET")
 	apiV1.HandleFunc("/sneak", s.sneak).Methods("POST")
+	apiV1.HandleFunc("/wind/{stamp}/{file}/{lat}/{lon}", s.wind).Methods("GET")
 
 	return router
+}
+
+func (s *server) wind(w http.ResponseWriter, r *http.Request) {
+	stamp := mux.Vars(r)["stamp"]
+	file := mux.Vars(r)["file"]
+
+	lat, err := strconv.ParseFloat(mux.Vars(r)["lat"], 64)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	lon, err := strconv.ParseFloat(mux.Vars(r)["lon"], 64)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	type windResult struct {
+		Wind  float64 `json:"wind"`
+		Speed float64 `json:"speed"`
+	}
+
+	for _, wi := range s.w.Winds(stamp) {
+		if wi.File == file {
+			var res windResult
+			res.Wind, res.Speed = wind.Interpolate([]*wind.Wind{wi}, nil, lat, lon, 0)
+			res.Speed *= 1.9438444924406
+
+			log.Infof("Wind %s (%f,%f) : %.1f° %.1f kt", file, lat, lon, res.Wind, res.Speed)
+
+			json.NewEncoder(w).Encode(res)
+			return
+		}
+	}
+	w.WriteHeader(http.StatusNotFound)
 }
 
 func (s *server) healthz(w http.ResponseWriter, r *http.Request) {

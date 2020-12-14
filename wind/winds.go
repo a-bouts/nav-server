@@ -34,6 +34,10 @@ type Winds struct {
 	lock  sync.RWMutex
 }
 
+func (w *Winds) Winds(stamp string) ForecastWinds {
+	return w.winds[stamp]
+}
+
 func InitWinds() *Winds {
 	w := &Winds{
 		winds: LoadAll(),
