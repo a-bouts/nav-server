@@ -55,24 +55,11 @@ func EvalSneak(route model.Route, winds *wind.Winds, positionPool *sync.Pool) Sn
 		},
 	}
 
-	context.vent = 0
-	if context.isExpes("vent1") {
-		context.vent = 1
-	} else if context.isExpes("vent2") {
-		context.vent = 2
-	} else if context.isExpes("vent3") {
-		context.vent = 3
-	} else if context.isExpes("vent4") {
-		context.vent = 4
-	}
-
 	var z polar.Polar
-	z = polar.Init(polar.Options{Race: context.route.Race.Polars, Sail: context.route.Options.Sail})
+	//z = polar.Init(polar.Options{Race: context.route.Race.Polars, Sail: context.route.Options.Sail})
 
-	if context.isExpes("new-polars") {
-		fmt.Println("Load new polars")
-		z = polar.Load(polar.Options{Race: context.route.Race.Boat, Sail: context.route.Options.Sail})
-	}
+	fmt.Println("Load new polars")
+	z = polar.Load(polar.Options{Race: context.route.Race.Boat, Sail: context.route.Options.Sail})
 
 	context.polar = z
 
@@ -93,7 +80,7 @@ func BearingSneak(context *Context, winds *wind.Winds) map[int]([]*SnakePosition
 	w, w1, x := winds.FindWinds(now)
 	log.Tracef("Found winds %s : %s - %.2f - %s", now.Format(time.RFC3339), w.String(), x, w1.String())
 
-	wb, _ := wind.Interpolate(w, w1, context.route.Start.Lat, context.route.Start.Lon, x, context.vent)
+	wb, _ := wind.Interpolate(w, w1, context.route.Start.Lat, context.route.Start.Lon, x)
 
 	duration := 0.0
 
@@ -106,7 +93,7 @@ func BearingSneak(context *Context, winds *wind.Winds) map[int]([]*SnakePosition
 		result[b] = []*SnakePosition{&SnakePosition{
 			Lat:      context.route.Start.Lat,
 			Lon:      context.route.Start.Lon,
-			Twa: 			toFixed(pos.twa, 1),
+			Twa:      toFixed(pos.twa, 1),
 			Bearing:  b,
 			Duration: 0,
 		}}
@@ -118,7 +105,7 @@ func BearingSneak(context *Context, winds *wind.Winds) map[int]([]*SnakePosition
 		for b := 0; b < 360; b++ {
 			src := result[b][len(result[b])-1]
 
-			wb, ws := wind.Interpolate(w, w1, src.Lat, src.Lon, x, context.vent)
+			wb, ws := wind.Interpolate(w, w1, src.Lat, src.Lon, x)
 
 			_, pos := jump(context, &Position{Latlon: context.route.Start}, nil, hops[b], float64(b), wb, ws, delta, 1, nil, false)
 			context.positionProvider.put(hops[b])
@@ -160,7 +147,7 @@ func TwaSneak(context Context, winds *wind.Winds) map[int]([]*SnakePosition) {
 	w, w1, x := winds.FindWinds(now)
 	log.Tracef("Found winds %s : %s - %.2f - %s", now.Format(time.RFC3339), w.String(), x, w1.String())
 
-	wb, _ := wind.Interpolate(w, w1, context.route.Start.Lat, context.route.Start.Lon, x, context.vent)
+	wb, _ := wind.Interpolate(w, w1, context.route.Start.Lat, context.route.Start.Lon, x)
 
 	duration := 0.0
 
@@ -173,7 +160,7 @@ func TwaSneak(context Context, winds *wind.Winds) map[int]([]*SnakePosition) {
 		result[b] = []*SnakePosition{&SnakePosition{
 			Lat:      context.route.Start.Lat,
 			Lon:      context.route.Start.Lon,
-			Twa: 			toFixed(pos.twa, 1),
+			Twa:      toFixed(pos.twa, 1),
 			Bearing:  b,
 			Duration: 0,
 		}}
@@ -185,7 +172,7 @@ func TwaSneak(context Context, winds *wind.Winds) map[int]([]*SnakePosition) {
 		for b := 0; b < 360; b++ {
 			src := result[b][len(result[b])-1]
 
-			wb, ws := wind.Interpolate(w, w1, src.Lat, src.Lon, x, context.vent)
+			wb, ws := wind.Interpolate(w, w1, src.Lat, src.Lon, x)
 
 			var bearing = wind.Heading(src.Twa, wb)
 
@@ -198,7 +185,7 @@ func TwaSneak(context Context, winds *wind.Winds) map[int]([]*SnakePosition) {
 				Lon:      pos.Latlon.Lon,
 				Bearing:  b,
 				Duration: pos.duration,
-				Twa: 			toFixed(pos.twa, 1),
+				Twa:      toFixed(pos.twa, 1),
 			})
 			src.Bearing = int(bearing)
 			src.Wind = toFixed(pos.wind, 1)
@@ -221,5 +208,5 @@ func TwaSneak(context Context, winds *wind.Winds) map[int]([]*SnakePosition) {
 
 func toFixed(val float64, n int) float64 {
 	mult := math.Pow10(n)
-	return math.Round(val * mult) / mult
+	return math.Round(val*mult) / mult
 }

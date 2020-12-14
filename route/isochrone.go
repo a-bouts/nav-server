@@ -30,13 +30,10 @@ type Context struct {
 
 	positionProvider positionProvider
 
-	newPolars             bool
-	progressiveIntervales bool
-	sqrtFromDist          bool
-	optim                 bool
-	maxDist               bool
-	alternatives          bool
-	vent                  int
+	sqrtFromDist bool
+	optim        bool
+	maxDist      bool
+	alternatives bool
 }
 
 type IsochronePosition struct {
@@ -443,7 +440,7 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 
 			go func(src *Position) {
 
-				wb, ws := wind.Interpolate(w, w1, src.Latlon.Lat, src.Latlon.Lon, x, context.vent)
+				wb, ws := wind.Interpolate(w, w1, src.Latlon.Lat, src.Latlon.Lon, x)
 
 				way, reachedByWay, wayDuration := way(context, start, src, wb, ws, duration, buoy, factor, min, isAlternative)
 				if reachedByWay {
@@ -639,36 +636,18 @@ func Run(route model.Route, l *land.Land, winds *wind.Winds, xm *xmpp.Xmpp, delt
 		},
 	}
 
-	if context.delta <= 1 {
-		context.route.Params.Expes["progressive-intervales"] = true
-		context.delta = 3
-	}
+	context.delta = 3
 
-	context.newPolars = context.isExpes("new-polars")
-	context.progressiveIntervales = context.isExpes("progressive-intervales")
 	context.sqrtFromDist = context.isExpes("sqrt-from-dist")
 	context.optim = context.isExpes("optim")
 	context.maxDist = context.isExpes("max-dist")
 	context.alternatives = context.isExpes("alternatives")
 
-	context.vent = 0
-	if context.isExpes("vent1") {
-		context.vent = 1
-	} else if context.isExpes("vent2") {
-		context.vent = 2
-	} else if context.isExpes("vent3") {
-		context.vent = 3
-	} else if context.isExpes("vent4") {
-		context.vent = 4
-	}
-
 	var z polar.Polar
-	z = polar.Init(polar.Options{Race: context.route.Race.Polars, Sail: context.route.Options.Sail})
+	//z = polar.Init(polar.Options{Race: context.route.Race.Polars, Sail: context.route.Options.Sail})
 
-	if context.newPolars {
-		log.Debug("Load new polars")
-		z = polar.Load(polar.Options{Race: context.route.Race.Boat, Sail: context.route.Options.Sail})
-	}
+	log.Debug("Load new polars")
+	z = polar.Load(polar.Options{Race: context.route.Race.Boat, Sail: context.route.Options.Sail})
 
 	context.polar = z
 
@@ -706,7 +685,7 @@ func Run(route model.Route, l *land.Land, winds *wind.Winds, xm *xmpp.Xmpp, delt
 	pos.distTo = dist
 	pos.navDuration = 0.0
 
-	wb, _ := wind.Interpolate(w, w1, pos.Latlon.Lat, pos.Latlon.Lon, x, context.vent)
+	wb, _ := wind.Interpolate(w, w1, pos.Latlon.Lat, pos.Latlon.Lon, x)
 	pos.twa = wind.Twa(float64(context.route.Bearing), wb)
 	az := int(float64(context.route.Bearing) * buoy.getFactor())
 	nav[az] = getAlternative(pos)
@@ -731,20 +710,18 @@ func Run(route model.Route, l *land.Land, winds *wind.Winds, xm *xmpp.Xmpp, delt
 	mustStop := false
 	for ok := true; ok; ok = duration < context.route.Params.MaxDuration && len(buoys) > 0 && !mustStop {
 		d := context.delta
-		if context.progressiveIntervales {
 
-			ks := make([]int, len(deltas))
-			kj := 0
-			for k := range deltas {
-				ks[kj] = k
-				kj++
-			}
-			sort.Ints(ks)
-			for _, ke := range ks {
-				if duration < float64(ke) {
-					d = deltas[ke]
-					break
-				}
+		ks := make([]int, len(deltas))
+		kj := 0
+		for k := range deltas {
+			ks[kj] = k
+			kj++
+		}
+		sort.Ints(ks)
+		for _, ke := range ks {
+			if duration < float64(ke) {
+				d = deltas[ke]
+				break
 			}
 		}
 		// if duration < 3 && d > 1 {
