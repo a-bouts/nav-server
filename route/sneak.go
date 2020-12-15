@@ -1,7 +1,6 @@
 package route
 
 import (
-	"fmt"
 	"math"
 	"sync"
 	"time"
@@ -58,7 +57,6 @@ func EvalSneak(route model.Route, winds *wind.Winds, positionPool *sync.Pool) Sn
 	var z polar.Polar
 	//z = polar.Init(polar.Options{Race: context.route.Race.Polars, Sail: context.route.Options.Sail})
 
-	fmt.Println("Load new polars")
 	z = polar.Load(polar.Options{Race: context.route.Race.Boat, Sail: context.route.Options.Sail})
 
 	context.polar = z
@@ -93,7 +91,7 @@ func BearingSneak(context *Context, winds *wind.Winds) map[int]([]*SnakePosition
 		result[b] = []*SnakePosition{&SnakePosition{
 			Lat:      context.route.Start.Lat,
 			Lon:      context.route.Start.Lon,
-			Twa: 			toFixed(pos.twa, 1),
+			Twa:      toFixed(pos.twa, 1),
 			Bearing:  b,
 			Duration: 0,
 		}}
@@ -160,7 +158,7 @@ func TwaSneak(context Context, winds *wind.Winds) map[int]([]*SnakePosition) {
 		result[b] = []*SnakePosition{&SnakePosition{
 			Lat:      context.route.Start.Lat,
 			Lon:      context.route.Start.Lon,
-			Twa: 			toFixed(pos.twa, 1),
+			Twa:      toFixed(pos.twa, 1),
 			Bearing:  b,
 			Duration: 0,
 		}}
@@ -185,7 +183,7 @@ func TwaSneak(context Context, winds *wind.Winds) map[int]([]*SnakePosition) {
 				Lon:      pos.Latlon.Lon,
 				Bearing:  b,
 				Duration: pos.duration,
-				Twa: 			toFixed(pos.twa, 1),
+				Twa:      toFixed(pos.twa, 1),
 			})
 			src.Bearing = int(bearing)
 			src.Wind = toFixed(pos.wind, 1)
@@ -208,5 +206,5 @@ func TwaSneak(context Context, winds *wind.Winds) map[int]([]*SnakePosition) {
 
 func toFixed(val float64, n int) float64 {
 	mult := math.Pow10(n)
-	return math.Round(val * mult) / mult
+	return math.Round(val*mult) / mult
 }
