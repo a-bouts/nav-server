@@ -71,13 +71,13 @@ func Load(o Options) Boat2 {
 	if err != nil {
 		fmt.Println("error:", err)
 	}
-	for _, sail := range boat.Sail {
+	for s, sail := range boat.Sail {
 		if sail.Name == "LIGHT_JIB" || sail.Name == "LIGHT_GNK" || sail.Name == "LightJib" || sail.Name == "LightGnk" {
-			sail.option = 1
+			boat.Sail[s].option = 1
 		} else if sail.Name == "STAYSAIL" || sail.Name == "HEAVY_GNK" || sail.Name == "Staysail" || sail.Name == "HeavyGnk" {
-			sail.option = 4
+			boat.Sail[s].option = 4
 		} else if sail.Name == "CODE_0" || sail.Name == "Code0" {
-			sail.option = 2
+			boat.Sail[s].option = 2
 		}
 	}
 	return boat

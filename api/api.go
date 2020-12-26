@@ -182,6 +182,7 @@ func (s *server) sneak(w http.ResponseWriter, req *http.Request) {
 	_ = json.NewDecoder(req.Body).Decode(&r)
 
 	log.Infof("Sneak '%s' for %d hours\n", r.Race.Name, int(r.Params.MaxDuration))
+	log.Debug(r.Options)
 
 	start := time.Now()
 
