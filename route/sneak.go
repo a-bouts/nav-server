@@ -47,7 +47,7 @@ func EvalSneak(route model.Route, winds *wind.Winds, positionPool *sync.Pool) Sn
 
 	context := Context{
 		route:      route,
-		boat:       polar.Boat{Foil: route.Options.Foil, Hull: route.Options.Hull},
+		boat:       polar.Boat{Foil: route.Options.Foil, Hull: route.Options.Hull, Sails: route.Options.Sail},
 		winchMalus: winchMalus,
 		positionProvider: positionProviderPool{
 			pool: positionPool,
@@ -63,7 +63,7 @@ func EvalSneak(route model.Route, winds *wind.Winds, positionPool *sync.Pool) Sn
 
 	return Sneak{StartTime: route.StartTime,
 		Bearing: BearingSneak(&context, winds),
-		Twa:     TwaSneak(context, winds),
+		Twa:     TwaSneak(&context, winds),
 	}
 }
 
@@ -134,7 +134,7 @@ func BearingSneak(context *Context, winds *wind.Winds) map[int]([]*SnakePosition
 	return result
 }
 
-func TwaSneak(context Context, winds *wind.Winds) map[int]([]*SnakePosition) {
+func TwaSneak(context *Context, winds *wind.Winds) map[int]([]*SnakePosition) {
 	delta := 1.0
 
 	result := make(map[int]([]*SnakePosition))
@@ -175,7 +175,7 @@ func TwaSneak(context Context, winds *wind.Winds) map[int]([]*SnakePosition) {
 			var bearing = wind.Heading(src.Twa, wb)
 
 			log.Tracef("TwaJump from (%f, %f) twa %.2f bearing %.2f, wb %.2f, ws %.2f, delta %.1f", hops[b].Latlon.Lat, hops[b].Latlon.Lon, src.Twa, bearing, wb, ws, delta)
-			_, pos := jump(&context, &Position{Latlon: context.route.Start}, nil, hops[b], bearing, wb, ws, delta, 1, nil)
+			_, pos := jump(context, &Position{Latlon: context.route.Start}, nil, hops[b], bearing, wb, ws, delta, 1, nil)
 			context.positionProvider.put(hops[b])
 
 			result[b] = append(result[b], &SnakePosition{
