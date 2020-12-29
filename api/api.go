@@ -168,10 +168,10 @@ func (s *server) route(w http.ResponseWriter, req *http.Request) {
 		72:   3.0,
 		9999: 6.0}
 
-	isos := route.Run(r, s.l, s.w, s.x, deltas, s.positionPool)
+	isos, ops := route.Run(r, s.l, s.w, s.x, deltas, s.positionPool)
 
 	delta := time.Now().Sub(start)
-	requestLogger.Infof("Route took %s", delta.String())
+	requestLogger.Infof("Route took %s (%d)", delta.String(), ops)
 
 	json.NewEncoder(w).Encode(isos)
 }
@@ -243,10 +243,10 @@ func (s *server) routeOld(w http.ResponseWriter, req *http.Request) {
 		72:   3.0,
 		9999: 6.0}
 
-	isos := route.Run(r, s.l, s.w, s.x, deltas, s.positionPool)
+	isos, ops := route.Run(r, s.l, s.w, s.x, deltas, s.positionPool)
 
 	delta := time.Now().Sub(start)
-	requestLogger.Infof("Route took %s", delta.String())
+	requestLogger.Infof("Route took %s (%d)", delta.String(), ops)
 
 	json.NewEncoder(w).Encode(isos)
 }

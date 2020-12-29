@@ -5,6 +5,7 @@ import (
 	"math"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -34,6 +35,8 @@ type Context struct {
 	optim        bool
 	maxDist      bool
 	alternatives bool
+
+	ops uint64
 }
 
 type IsochronePosition struct {
@@ -133,11 +136,13 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 
 	twa := wind.Twa(b, wb)
 
-	if false { //context.experiment {
-		if math.Abs(twa) < 30 || math.Abs(twa) > 170 {
+	if context.optim {
+		if math.Abs(twa) < 30 || math.Abs(twa) > 160 {
 			return 0, nil
 		}
 	}
+
+	atomic.AddUint64(&context.ops, 1)
 
 	bearing := int(math.Round(b))
 
@@ -157,14 +162,9 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 		// changement de voile = vitesse / 2 pendant 5 minutes : on enlève 2 minutes et demi
 		dist = boatSpeed * 1.852 * (d*60.0 - context.winchMalus/2) / 60 * 1000.0
 		change = true
-
 	}
 
 	to := context.Destination(src.Latlon, b, dist)
-	if context.land != nil && context.land.IsLand(to.Lat, to.Lon) {
-		return 0, nil
-	}
-
 	if context.land != nil && context.land.IsLand(to.Lat, to.Lon) {
 		return 0, nil
 	}
@@ -297,12 +297,12 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 	bMin := 0
 	bMax := 360
 	if context.optim {
-		if start.fromDist > 0.0 {
-			bMin = start.bearing - 120
+		if src.fromDist > 0.0 {
+			bMin = src.bearing - 120
 			if bMin < 0 {
-				bMin = 360 - bMin
+				bMin = bMin + 360
 			}
-			bMax = start.bearing + 120
+			bMax = src.bearing + 120
 			if bMax >= 360 {
 				bMax = bMax - 360
 			}
@@ -616,7 +616,7 @@ func findWinds(winds map[string][]*wind.Wind, m time.Time) ([]*wind.Wind, []*win
 	return winds[keys[len(keys)-1]], nil, 0
 }
 
-func Run(route model.Route, l *land.Land, winds *wind.Winds, xm *xmpp.Xmpp, deltas map[int]float64, positionPool *sync.Pool) Navs {
+func Run(route model.Route, l *land.Land, winds *wind.Winds, xm *xmpp.Xmpp, deltas map[int]float64, positionPool *sync.Pool) (Navs, uint64) {
 
 	winchMalus := 5.0
 	if route.Options.Winch {
@@ -947,7 +947,7 @@ func Run(route model.Route, l *land.Land, winds *wind.Winds, xm *xmpp.Xmpp, delt
 		}
 	}
 
-	return result
+	return result, context.ops
 }
 
 func RunTestIsLand(l *land.Land) Navs {
