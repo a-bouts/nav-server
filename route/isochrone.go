@@ -295,7 +295,7 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 	}
 
 	bMin := 0
-	bMax := 360
+	bMax := 359
 	if context.optim {
 		if src.fromDist > 0.0 {
 			bMin = src.bearing - 120
@@ -310,7 +310,7 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 	}
 
 	if bMax > bMin {
-		for b := float64(bMin); b < float64(bMax); b += 1.0 {
+		for b := float64(bMin); b <= float64(bMax); b += 1.0 {
 			az, to := jump(context, start, buoy, src, b, wb, ws, duration, factor, min, isAlternative)
 			if to != nil {
 				prev, exists := result[az]
@@ -349,7 +349,7 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 				}
 			}
 		}
-		for b := 0.0; b < float64(bMax); b += 1.0 {
+		for b := 0.0; b <= float64(bMax); b += 1.0 {
 			az, to := jump(context, start, buoy, src, b, wb, ws, duration, factor, min, false)
 			if to != nil {
 				prev, exists := result[az]
@@ -543,6 +543,10 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 						maxDistFactor = 1.2 + 0.3*(1000.0-refDist/1000.0)
 					}
 				}
+				minDistFactor := 2.0
+				if context.optim {
+					minDistFactor = 1.5
+				}
 				if isToAvoid(buoy, dst.Latlon) {
 					nbToAvoid++
 					toRemove = append(toRemove, az)
@@ -552,7 +556,7 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 				} else if dst.fromDist+dst.distTo > maxDistFactor*start.distTo {
 					nbFar++
 					toRemove = append(toRemove, az)
-				} else if len(isochrone)-len(toRemove) > 25 && dst.distTo > 2**min {
+				} else if len(isochrone)-len(toRemove) > 25 && dst.distTo > minDistFactor**min {
 					nbFarFromMin++
 					toRemove = append(toRemove, az)
 				} else {
