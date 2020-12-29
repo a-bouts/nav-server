@@ -562,7 +562,7 @@ func navigate(context *Context, now time.Time, factor float64, max map[int]float
 				} else {
 					max[az] = dst.fromDist
 					for i := 0; i < 14; i++ {
-						if i != alt.best && alt.alternatives[i] != nil && alt.alternatives[i].fromDist < dst.previousWindLine.fromDist {
+						if i != alt.best && alt.alternatives[i] != nil && (alt.alternatives[i].fromDist < dst.previousWindLine.fromDist || alt.alternatives[i].fromDist-dst.previousWindLine.fromDist < 0.45*(dst.fromDist-dst.previousWindLine.fromDist)) {
 							alt.alternatives[i] = nil
 							nbAlternatives++
 						}
