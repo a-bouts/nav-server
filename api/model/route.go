@@ -28,6 +28,7 @@ type Params struct {
 	Expes       map[string]bool `json:"expes"`
 	Stop        bool            `json:"stop"`
 	Delta       float64         `json:"delta"`
+	Accuracy    int             `json:"accuracy"`
 	MaxDuration float64         `json:"maxDuration"`
 	Delay       int             `json:"delay"`
 }

@@ -62,7 +62,7 @@ func BearingLine(context *Context, winds *wind.Winds) map[int](*BoatLine) {
 	for b := 0; b < 360; b++ {
 		pos := Position{
 			Latlon:  context.route.Start,
-			bearing: b,
+			bearing: float64(b),
 			sail:    context.route.CurrentSail}
 		pos.twa = wind.Twa(float64(b), wb)
 		result[b] = &BoatLine{Twa: pos.twa, Line: []latlon.LatLon{context.route.Start}}
@@ -76,7 +76,8 @@ func BearingLine(context *Context, winds *wind.Winds) map[int](*BoatLine) {
 
 			wb, ws := wind.Interpolate(w, w1, src.Lat, src.Lon, x)
 
-			_, pos := jump(context, &Position{Latlon: context.route.Start}, nil, hops[b], float64(b), wb, ws, delta, 1, nil)
+			twa := wind.Twa(float64(b), wb)
+			_, pos := jump(context, &Position{Latlon: context.route.Start}, nil, hops[b], float64(b), twa, wb, ws, delta, 1, nil)
 			context.positionProvider.put(hops[b])
 
 			result[b].Line = append(result[b].Line, pos.Latlon)
@@ -110,7 +111,7 @@ func TwaLine(context Context, winds *wind.Winds) map[int](*BoatLine) {
 	for b := 0; b < 360; b++ {
 		pos := Position{
 			Latlon:  context.route.Start,
-			bearing: b,
+			bearing: float64(b),
 			sail:    context.route.CurrentSail}
 		pos.twa = wind.Twa(float64(b), wb)
 		result[b] = &BoatLine{Twa: pos.twa, Line: []latlon.LatLon{context.route.Start}}
@@ -126,7 +127,8 @@ func TwaLine(context Context, winds *wind.Winds) map[int](*BoatLine) {
 
 			var bearing = wind.Heading(result[b].Twa, wb)
 
-			_, pos := jump(&context, &Position{Latlon: context.route.Start}, nil, hops[b], bearing, wb, ws, delta, 1, nil)
+			twa := wind.Twa(float64(b), wb)
+			_, pos := jump(&context, &Position{Latlon: context.route.Start}, nil, hops[b], bearing, twa, wb, ws, delta, 1, nil)
 			context.positionProvider.put(hops[b])
 
 			result[b].Line = append(result[b].Line, pos.Latlon)

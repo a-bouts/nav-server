@@ -68,7 +68,7 @@ type WindLinePosition struct {
 	Lat       float64 `json:"lat"`
 	Lon       float64 `json:"lon"`
 	Twa       float64 `json:"twa"`
-	Bearing   int     `json:"bearing"`
+	Bearing   float64 `json:"bearing"`
 	Wind      float64 `json:"wind"`
 	WindSpeed float64 `json:"windSpeed"`
 	BoatSpeed float64 `json:"boatSpeed"`
@@ -117,10 +117,25 @@ func isToAvoid(buoy Buoy, p latlon.LatLon) bool {
 
 var cartesian latlon.LatLonHaversine = latlon.LatLonHaversine{}
 
-func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64, wb float64, ws float64, d float64, factor float64, min *float64) (int, *Position) {
+func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64, twa float64, wb float64, ws float64, d float64, factor float64, min *float64) (int, *Position) {
 	change := false
 
-	twa := wind.Twa(b, wb)
+	if math.Abs(twa) < 30 || math.Abs(twa) > 160 {
+		return 0, nil
+	}
+	if src.fromDist > 0.0 {
+		bMin := src.bearing - 120
+		if bMin < 0 {
+			bMin = bMin + 360
+		}
+		bMax := src.bearing + 120
+		if bMax >= 360 {
+			bMax = bMax - 360
+		}
+		if bMin < bMax && (b < bMin || b > bMax) || bMin > bMax && (b > bMax && b < bMin) {
+			return 0, nil
+		}
+	}
 
 	if false { //context.experiment {
 		if math.Abs(twa) < 30 || math.Abs(twa) > 170 {
@@ -128,16 +143,11 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 		}
 	}
 
-	bearing := int(math.Round(b))
+	bearing := b
 
 	isInIceLimits := src.isInIceLimits
 	boatSpeed, sail, isFoil := context.polar.GetBoatSpeed(twa, ws, context.boat, isInIceLimits)
-	//if context.experiment {
-	//	boatSpeed, sail = context.polar.GetOptimBoatSpeed(twa, ws*3.6, context.boat, src.sail, context.winchMalus)
-	//}
-	//if boatSpeed <= 0.0 {
-	//    return 0, nil
-	//}
+
 	dist := boatSpeed * 1.852 * d * 1000.0
 	if twa*src.twa < 0 || sail != src.sail {
 		// changement de voile = vitesse / 2 pendant 5 minutes : on enlève 2 minutes et demi
@@ -226,7 +236,7 @@ func doorReached(context *Context, start *Position, src *Position, buoy Buoy, wb
 		res := context.positionProvider.get()
 		res.Latlon = latlon
 		res.fromDist = fullDist
-		res.bearing = int(math.Round(az12))
+		res.bearing = az12
 		res.twa = twa
 		res.wind = wb
 		res.windSpeed = ws * 1.943844
@@ -254,54 +264,15 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 		return result, true, dur
 	}
 
-	bMin := 0
-	bMax := 360
-	if context.isExpes("optim") {
-		if start.fromDist > 0.0 {
-			bMin = start.bearing - 120
-			if bMin < 0 {
-				bMin = 360 - bMin
-			}
-			bMax = start.bearing + 120
-			if bMax >= 360 {
-				bMax = bMax - 360
-			}
-		}
-	}
-
-	if bMax > bMin {
-		for b := float64(bMin); b < float64(bMax); b += 1.0 {
-			az, to := jump(context, start, buoy, src, b, wb, ws, duration, factor, min)
-			if to != nil {
-				prev, exists := result[az]
-				if !exists || prev.fromDist < to.fromDist {
-					result[az] = to
-				} else {
-					context.positionProvider.put(to)
-				}
-			}
-		}
-	} else {
-		for b := float64(bMin); b < 360.0; b += 1.0 {
-			az, to := jump(context, start, buoy, src, b, wb, ws, duration, factor, min)
-			if to != nil {
-				prev, exists := result[az]
-				if !exists || prev.fromDist < to.fromDist {
-					result[az] = to
-				} else {
-					context.positionProvider.put(to)
-				}
-			}
-		}
-		for b := 0.0; b < float64(bMax); b += 1.0 {
-			az, to := jump(context, start, buoy, src, b, wb, ws, duration, factor, min)
-			if to != nil {
-				prev, exists := result[az]
-				if !exists || prev.fromDist < to.fromDist {
-					result[az] = to
-				} else {
-					context.positionProvider.put(to)
-				}
+	for b := 0.0; b < 360; b += 1.0 {
+		twa := wind.Twa(b, wb)
+		az, to := jump(context, start, buoy, src, b, twa, wb, ws, duration, factor, min)
+		if to != nil {
+			prev, exists := result[az]
+			if !exists || prev.fromDist < to.fromDist {
+				result[az] = to
+			} else {
+				context.positionProvider.put(to)
 			}
 		}
 	}
@@ -573,7 +544,7 @@ func Run(route model.Route, l *land.Land, winds *wind.Winds, xm *xmpp.Xmpp, delt
 
 	pos := context.positionProvider.get()
 	pos.Latlon = context.route.Start
-	pos.bearing = context.route.Bearing
+	pos.bearing = float64(context.route.Bearing)
 	pos.sail = context.route.CurrentSail
 	pos.distTo = dist
 
