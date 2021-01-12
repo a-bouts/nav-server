@@ -82,7 +82,7 @@ type WindLinePosition struct {
 	Lat       float64 `json:"lat"`
 	Lon       float64 `json:"lon"`
 	Twa       float64 `json:"twa"`
-	Bearing   int     `json:"bearing"`
+	Bearing   float64 `json:"bearing"`
 	Wind      float64 `json:"wind"`
 	WindSpeed float64 `json:"windSpeed"`
 	BoatSpeed float64 `json:"boatSpeed"`
@@ -131,20 +131,31 @@ func isToAvoid(buoy Buoy, p latlon.LatLon) bool {
 
 var cartesian latlon.LatLonHaversine = latlon.LatLonHaversine{}
 
-func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64, wb float64, ws float64, d float64, factor float64, min *float64, isAlternative bool) (int, *Position) {
+func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64, twa float64, wb float64, ws float64, d float64, factor float64, min *float64, isAlternative bool) (int, *Position) {
 	change := false
-
-	twa := wind.Twa(b, wb)
 
 	if context.optim {
 		if math.Abs(twa) < 30 || math.Abs(twa) > 160 {
 			return 0, nil
 		}
+		if src.fromDist > 0.0 {
+			bMin := src.bearing - 120
+			if bMin < 0 {
+				bMin = bMin + 360
+			}
+			bMax := src.bearing + 120
+			if bMax >= 360 {
+				bMax = bMax - 360
+			}
+			if bMin < bMax && (b < bMin || b > bMax) || bMin > bMax && (b > bMax && b < bMin) {
+				return 0, nil
+			}
+		}
 	}
 
 	atomic.AddUint64(&context.ops, 1)
 
-	bearing := int(math.Round(b))
+	bearing := b //math.Round(b)
 
 	isInIceLimits := src.isInIceLimits
 	boatSpeed, sail, isFoil := context.polar.GetBoatSpeed(twa, ws, context.boat, isInIceLimits)
@@ -245,7 +256,7 @@ func doorReached(context *Context, start *Position, src *Position, buoy Buoy, wb
 		res := context.positionProvider.get()
 		res.Latlon = latlon
 		res.fromDist = fullDist
-		res.bearing = int(math.Round(az12))
+		res.bearing = math.Round(az12)
 		res.twa = twa
 		res.wind = wb
 		res.windSpeed = ws * 1.943844
@@ -294,77 +305,43 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 		return result, true, dur
 	}
 
-	bMin := 0
-	bMax := 359
-	if context.optim {
-		if src.fromDist > 0.0 {
-			bMin = src.bearing - 120
-			if bMin < 0 {
-				bMin = bMin + 360
-			}
-			bMax = src.bearing + 120
-			if bMax >= 360 {
-				bMax = bMax - 360
+	for b := 0.0; b < 360; b += 1.0 {
+		twa := wind.Twa(b, wb)
+		az, to := jump(context, start, buoy, src, b, twa, wb, ws, duration, factor, min, isAlternative)
+		if to != nil {
+			prev, exists := result[az]
+			a := alternative(to)
+			if !exists {
+				result[az] = getAlternative(to)
+			} else {
+				if prev.alternatives[a] == nil || prev.alternatives[a].fromDist < to.fromDist {
+					prev.alternatives[a] = to
+				} else {
+					context.positionProvider.put(to)
+				}
+				if prev.alternatives[prev.best].fromDist < to.fromDist {
+					prev.best = a
+				}
 			}
 		}
 	}
 
-	if bMax > bMin {
-		for b := float64(bMin); b <= float64(bMax); b += 1.0 {
-			az, to := jump(context, start, buoy, src, b, wb, ws, duration, factor, min, isAlternative)
-			if to != nil {
-				prev, exists := result[az]
-				a := alternative(to)
-				if !exists {
-					result[az] = getAlternative(to)
+	for twa := -180.0; twa < 180; twa += 1.0 {
+		b := wind.Heading(twa, wb)
+		az, to := jump(context, start, buoy, src, b, twa, wb, ws, duration, factor, min, isAlternative)
+		if to != nil {
+			prev, exists := result[az]
+			a := alternative(to)
+			if !exists {
+				result[az] = getAlternative(to)
+			} else {
+				if prev.alternatives[a] == nil || prev.alternatives[a].fromDist < to.fromDist {
+					prev.alternatives[a] = to
 				} else {
-					if prev.alternatives[a] == nil || prev.alternatives[a].fromDist < to.fromDist {
-						prev.alternatives[a] = to
-					} else {
-						context.positionProvider.put(to)
-					}
-					if prev.alternatives[prev.best].fromDist < to.fromDist {
-						prev.best = a
-					}
+					context.positionProvider.put(to)
 				}
-			}
-		}
-	} else {
-		for b := float64(bMin); b < 360.0; b += 1.0 {
-			az, to := jump(context, start, buoy, src, b, wb, ws, duration, factor, min, false)
-			if to != nil {
-				prev, exists := result[az]
-				a := alternative(to)
-				if !exists {
-					result[az] = getAlternative(to)
-				} else {
-					if prev.alternatives[a] == nil || prev.alternatives[a].fromDist < to.fromDist {
-						prev.alternatives[a] = to
-					} else {
-						context.positionProvider.put(to)
-					}
-					if prev.alternatives[prev.best].fromDist < to.fromDist {
-						prev.best = a
-					}
-				}
-			}
-		}
-		for b := 0.0; b <= float64(bMax); b += 1.0 {
-			az, to := jump(context, start, buoy, src, b, wb, ws, duration, factor, min, false)
-			if to != nil {
-				prev, exists := result[az]
-				a := alternative(to)
-				if !exists {
-					result[az] = getAlternative(to)
-				} else {
-					if prev.alternatives[a] == nil || prev.alternatives[a].fromDist < to.fromDist {
-						prev.alternatives[a] = to
-					} else {
-						context.positionProvider.put(to)
-					}
-					if prev.alternatives[prev.best].fromDist < to.fromDist {
-						prev.best = a
-					}
+				if prev.alternatives[prev.best].fromDist < to.fromDist {
+					prev.best = a
 				}
 			}
 		}

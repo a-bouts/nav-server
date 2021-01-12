@@ -9,7 +9,7 @@ import (
 type Position struct {
 	Latlon           latlon.LatLon
 	fromDist         float64
-	bearing          int
+	bearing          float64
 	twa              float64
 	wind             float64
 	windSpeed        float64

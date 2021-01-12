@@ -11,7 +11,7 @@ type Route struct {
 	Params      Params        `json:"params"`
 	StartTime   time.Time     `json:"startTime"`
 	Start       latlon.LatLon `json:"start"`
-	Bearing     int           `json:"bearing"`
+	Bearing     float64       `json:"bearing"`
 	CurrentSail byte          `json:"currentSail"`
 	Race        race.Race     `json:"race"`
 	Options     Options       `json:"options"`
@@ -28,6 +28,7 @@ type Params struct {
 	Expes       map[string]bool `json:"expes"`
 	Stop        bool            `json:"stop"`
 	Delta       float64         `json:"delta"`
+	Accuracy    int             `json:"accuracy"`
 	MaxDuration float64         `json:"maxDuration"`
 	Delay       int             `json:"delay"`
 }

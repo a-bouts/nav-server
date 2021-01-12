@@ -46,7 +46,7 @@ func InitServer(cpuprofile bool, l *land.Land, w *wind.Winds, x *xmpp.Xmpp) *mux
 		},
 	}
 
-	api := router.PathPrefix("/").Subrouter()
+	api := router.PathPrefix("/private/").Subrouter()
 
 	api.HandleFunc("/nav/-/healthz", s.healthz).Methods(http.MethodGet)
 	api.HandleFunc("/nav/run", s.routeOld).Methods("POST")
@@ -157,7 +157,11 @@ func (s *server) route(w http.ResponseWriter, req *http.Request) {
 	var r model.Route
 	_ = json.NewDecoder(req.Body).Decode(&r)
 
-	requestLogger.Infof("Route '%s' from '%s' every '%.2f' stop %t\n", r.Race.Name, r.StartTime.String(), r.Params.Delta, r.Params.Stop)
+	if r.Params.Accuracy <= 0 || r.Params.Accuracy > 5 {
+		r.Params.Accuracy = 3
+	}
+
+	requestLogger.Infof("Route '%s' from '%s' at '%d' every '%.2f' stop %t\n", r.Race.Name, r.StartTime.String(), r.Params.Accuracy, r.Params.Delta, r.Params.Stop)
 
 	start := time.Now()
 
@@ -221,7 +225,7 @@ func (s *server) routeOld(w http.ResponseWriter, req *http.Request) {
 		},
 		StartTime:   gonav.StartTime,
 		Start:       gonav.Start,
-		Bearing:     gonav.Bearing,
+		Bearing:     float64(gonav.Bearing),
 		CurrentSail: gonav.CurrentSail,
 		Race:        gonav.Race,
 		Options: model.Options{
@@ -265,7 +269,7 @@ func (s *server) sneakOld(w http.ResponseWriter, req *http.Request) {
 		},
 		StartTime:   gonav.StartTime,
 		Start:       gonav.Start,
-		Bearing:     gonav.Bearing,
+		Bearing:     float64(gonav.Bearing),
 		CurrentSail: gonav.CurrentSail,
 		Race:        gonav.Race,
 		Options: model.Options{
