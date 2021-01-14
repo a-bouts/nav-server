@@ -46,7 +46,7 @@ func InitServer(cpuprofile bool, l *land.Land, w *wind.Winds, x *xmpp.Xmpp) *mux
 		},
 	}
 
-	api := router.PathPrefix("/private/").Subrouter()
+	api := router.PathPrefix("/").Subrouter()
 
 	api.HandleFunc("/nav/-/healthz", s.healthz).Methods(http.MethodGet)
 	api.HandleFunc("/nav/run", s.routeOld).Methods("POST")
