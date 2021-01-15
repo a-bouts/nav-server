@@ -172,6 +172,14 @@ func (s *server) route(w http.ResponseWriter, req *http.Request) {
 		72:   3.0,
 		9999: 6.0}
 
+	if r.Race.Polars == "vg" {
+		deltas = map[int]float64{
+			24:   1.0 / 6.0,
+			48:   0.5,
+			72:   1.0,
+			9999: 3.0}
+	}
+
 	isos, ops := route.Run(r, s.l, s.w, s.x, deltas, s.positionPool)
 
 	delta := time.Now().Sub(start)
