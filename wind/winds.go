@@ -29,6 +29,8 @@ func (w ForecastWinds) String() string {
 	return res
 }
 
+type Providers map[string]*Winds
+
 type Winds struct {
 	winds map[string](ForecastWinds)
 	lock  sync.RWMutex
@@ -38,19 +40,28 @@ func (w *Winds) Winds(stamp string) ForecastWinds {
 	return w.winds[stamp]
 }
 
-func InitWinds() *Winds {
-	w := &Winds{
-		winds: LoadAll(),
+func InitWinds() Providers {
+	p := Providers{"noaa": &Winds{
+		winds: LoadAll("noaa"),
 		lock:  sync.RWMutex{},
-	}
+	}, "meteo-france": &Winds{
+		winds: LoadAll("meteo-france"),
+		lock:  sync.RWMutex{},
+	}}
 
 	s := gocron.NewScheduler()
 	jobxx := s.Every(15).Seconds()
-	jobxx.Do(w.Merge)
+	jobxx.Do(p.MergeAll)
 
 	go s.Start()
 
-	return w
+	return p
+}
+
+func (ps Providers) MergeAll() {
+	for p, w := range ps {
+		w.Merge(p)
+	}
 }
 
 func (w *Winds) FindWinds(m time.Time) (ForecastWinds, ForecastWinds, float64) {
@@ -77,14 +88,14 @@ func (w *Winds) FindWinds(m time.Time) (ForecastWinds, ForecastWinds, float64) {
 	return w.winds[keys[len(keys)-1]], nil, 0
 }
 
-func (w *Winds) Merge() error {
+func (w *Winds) Merge(provider string) error {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 
 	// On supprime les fichiers qui ne sont plus là
 	var toRemove []string
 	for k, ws := range w.winds {
-		if _, err := os.Stat("grib-data/" + ws[0].File); os.IsNotExist(err) {
+		if _, err := os.Stat("grib-data/" + provider + "/" + ws[0].File); os.IsNotExist(err) {
 			toRemove = append(toRemove, k)
 		}
 	}
@@ -94,7 +105,7 @@ func (w *Winds) Merge() error {
 	}
 
 	var files []string
-	err := filepath.Walk("grib-data/", func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk("grib-data/"+provider+"/", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			log.WithError(err).Errorf("Error walking file '%s'", path)
 		} else if info.Mode().IsRegular() && !strings.HasSuffix(info.Name(), ".tmp") {
@@ -162,7 +173,7 @@ func (w *Winds) Merge() error {
 				}
 			}
 
-			wind, err := Init(date, file)
+			wind, err := Init(provider, date, file)
 			if err != nil {
 				log.WithError(err).Errorf("Error loading grib file '%s'", file)
 			} else {
@@ -175,10 +186,10 @@ func (w *Winds) Merge() error {
 	return nil
 }
 
-func LoadAll() map[string](ForecastWinds) {
+func LoadAll(provider string) map[string](ForecastWinds) {
 	winds := make(map[string](ForecastWinds))
 	var files []string
-	err := filepath.Walk("grib-data/", func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk("grib-data/"+provider+"/", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			log.WithError(err).Errorf("Error walking file '%s'", path)
 		} else if info.Mode().IsRegular() && !strings.HasSuffix(info.Name(), ".tmp") {
@@ -199,7 +210,7 @@ func LoadAll() map[string](ForecastWinds) {
 
 		d := strings.Split(f, ".")[0]
 
-		log.Debug(f)
+		log.Debug(provider, f)
 
 		h, err := strconv.Atoi(strings.Split(f, ".")[1][1:])
 		if err != nil {
@@ -241,11 +252,11 @@ func LoadAll() map[string](ForecastWinds) {
 			f, _ := strconv.Atoi(strings.Split(file, ".")[1][1:])
 			date = date.Add(time.Hour * time.Duration(f))
 			sdate := date.Format("2006010215")
-			wind, err := Init(date, file)
+			wind, err := Init(provider, date, file)
 			if err != nil {
 				log.WithError(err).Errorf("Error loading grib file '%s'", file)
 			} else {
-				log.Debugf("Init %s %s", sdate, wind.File)
+				log.Debugf("%s Init %s %s", provider, sdate, wind.File)
 				winds[sdate] = append(winds[sdate], &wind)
 			}
 		}

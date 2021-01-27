@@ -26,18 +26,18 @@ import (
 type server struct {
 	cpuprofile   bool
 	l            *land.Land
-	w            *wind.Winds
+	p            wind.Providers
 	x            *xmpp.Xmpp
 	positionPool *sync.Pool
 }
 
-func InitServer(cpuprofile bool, l *land.Land, w *wind.Winds, x *xmpp.Xmpp) *mux.Router {
+func InitServer(cpuprofile bool, l *land.Land, p wind.Providers, x *xmpp.Xmpp) *mux.Router {
 
 	router := mux.NewRouter().StrictSlash(true)
 
 	s := server{cpuprofile: cpuprofile,
 		l: l,
-		w: w,
+		p: p,
 		x: x,
 		positionPool: &sync.Pool{
 			New: func() interface{} {
@@ -54,15 +54,22 @@ func InitServer(cpuprofile bool, l *land.Land, w *wind.Winds, x *xmpp.Xmpp) *mux
 	api.HandleFunc("/nav/boatlines", s.sneakOld).Methods("POST")
 
 	apiV1 := router.PathPrefix("/route/api/v1").Subrouter()
-	apiV1.HandleFunc("/route", s.route).Methods("POST")
+	apiV1.HandleFunc("/route", s.routeV1).Methods("POST")
 	apiV1.HandleFunc("/expes", s.getExpes).Methods("GET")
-	apiV1.HandleFunc("/sneak", s.sneak).Methods("POST")
-	apiV1.HandleFunc("/wind/{stamp}/{file}/{lat}/{lon}", s.wind).Methods("GET")
+	apiV1.HandleFunc("/sneak", s.sneakV1).Methods("POST")
+	apiV1.HandleFunc("/wind/{provider}/{stamp}/{file}/{lat}/{lon}", s.wind).Methods("GET")
+
+	apiV2 := router.PathPrefix("/route/api/v2").Subrouter()
+	apiV2.HandleFunc("/route", s.route).Methods("POST")
+	apiV2.HandleFunc("/expes", s.getExpes).Methods("GET")
+	apiV2.HandleFunc("/sneak", s.sneak).Methods("POST")
+	apiV2.HandleFunc("/wind/{provider}/{stamp}/{file}/{lat}/{lon}", s.wind).Methods("GET")
 
 	return router
 }
 
 func (s *server) wind(w http.ResponseWriter, r *http.Request) {
+	provider := mux.Vars(r)["provider"]
 	stamp := mux.Vars(r)["stamp"]
 	file := mux.Vars(r)["file"]
 
@@ -82,7 +89,7 @@ func (s *server) wind(w http.ResponseWriter, r *http.Request) {
 		Speed float64 `json:"speed"`
 	}
 
-	for _, wi := range s.w.Winds(stamp) {
+	for _, wi := range s.p[provider].Winds(stamp) {
 		if wi.File == file {
 			var res windResult
 			res.Wind, res.Speed = wind.Interpolate([]*wind.Wind{wi}, nil, lat, lon, 0)
@@ -166,7 +173,56 @@ func (s *server) route(w http.ResponseWriter, req *http.Request) {
 		72:   3.0,
 		9999: 6.0}
 
-	isos := route.Run(r, s.l, s.w, s.x, deltas, s.positionPool)
+	isos := route.Run(r, s.l, s.p[r.Provider], s.x, deltas, s.positionPool)
+
+	delta := time.Now().Sub(start)
+	requestLogger.Infof("Route took %s", delta.String())
+
+	json.NewEncoder(w).Encode(isos)
+}
+
+func (s *server) routeV1(w http.ResponseWriter, req *http.Request) {
+	if s.cpuprofile {
+		//runtime.SetCPUProfileRate(300)
+		defer profile.Start().Stop()
+	}
+	//defer profile.Start(profile.MemProfile).Stop()
+
+	fields := log.Fields{
+		"action": "route",
+	}
+	if ip, err := getIp(req); err == nil {
+		fields["IP"] = ip
+	}
+	requestLogger := log.WithFields(fields)
+
+	var r model.Route
+	_ = json.NewDecoder(req.Body).Decode(&r)
+
+	if r.Params.Accuracy <= 0 || r.Params.Accuracy > 5 {
+		r.Params.Accuracy = 3
+	}
+
+	requestLogger.Infof("Route '%s' from '%s' at '%d' every '%.2f' stop %t\n", r.Race.Name, r.StartTime.String(), r.Params.Accuracy, r.Params.Delta, r.Params.Stop)
+
+	start := time.Now()
+
+	deltas := map[int]float64{
+		6:    1.0 / 6.0,
+		12:   0.5,
+		48:   1.0,
+		72:   3.0,
+		9999: 6.0}
+
+	if r.Race.Polars == "vg" {
+		deltas = map[int]float64{
+			24:   1.0 / 6.0,
+			48:   0.5,
+			72:   1.0,
+			9999: 3.0}
+	}
+
+	isos := route.Run(r, s.l, s.p["noaa"], s.x, deltas, s.positionPool)
 
 	delta := time.Now().Sub(start)
 	requestLogger.Infof("Route took %s", delta.String())
@@ -184,7 +240,25 @@ func (s *server) sneak(w http.ResponseWriter, req *http.Request) {
 
 	start := time.Now()
 
-	lines := route.EvalSneak(r, s.w, s.positionPool)
+	lines := route.EvalSneak(r, s.p[r.Provider], s.positionPool)
+
+	delta := time.Now().Sub(start)
+	log.Infof("Sneak took %s", delta.String())
+
+	json.NewEncoder(w).Encode(lines)
+}
+
+func (s *server) sneakV1(w http.ResponseWriter, req *http.Request) {
+
+	var r model.Route
+	_ = json.NewDecoder(req.Body).Decode(&r)
+
+	log.Infof("Sneak '%s' for %d hours\n", r.Race.Name, int(r.Params.MaxDuration))
+	log.Debug(r.Options)
+
+	start := time.Now()
+
+	lines := route.EvalSneak(r, s.p["noaa"], s.positionPool)
 
 	delta := time.Now().Sub(start)
 	log.Infof("Sneak took %s", delta.String())
@@ -241,7 +315,7 @@ func (s *server) routeOld(w http.ResponseWriter, req *http.Request) {
 		72:   3.0,
 		9999: 6.0}
 
-	isos := route.Run(r, s.l, s.w, s.x, deltas, s.positionPool)
+	isos := route.Run(r, s.l, s.p["noaa"], s.x, deltas, s.positionPool)
 
 	delta := time.Now().Sub(start)
 	requestLogger.Infof("Route took %s", delta.String())
@@ -278,7 +352,7 @@ func (s *server) sneakOld(w http.ResponseWriter, req *http.Request) {
 
 	start := time.Now()
 
-	lines := route.GetBoatLines(r, s.w, s.positionPool)
+	lines := route.GetBoatLines(r, s.p["noaa"], s.positionPool)
 
 	delta := time.Now().Sub(start)
 	log.Infof("Sneak took %s", delta.String())
