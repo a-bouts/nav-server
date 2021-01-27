@@ -8,6 +8,7 @@ import (
 )
 
 type Route struct {
+	Provider    string        `json:"provider"`
 	Params      Params        `json:"params"`
 	StartTime   time.Time     `json:"startTime"`
 	Start       latlon.LatLon `json:"start"`

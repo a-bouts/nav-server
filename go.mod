@@ -10,8 +10,8 @@ require (
 	github.com/ianlancetaylor/demangle v0.0.0-20200703042025-6ce5b4c20f33 // indirect
 	github.com/jasonlvhit/gocron v0.0.0-20200423141508-ab84337f7963
 	github.com/mattn/go-xmpp v0.0.0-20200309091041-899ef71e80d2
-	github.com/nilsmagnus/grib v1.2.6
 	github.com/peterbourgon/ff v1.7.0
+	github.com/phtheirichthys/grib v1.2.7
 	github.com/pkg/profile v1.5.0
 	github.com/sirupsen/logrus v1.7.0
 	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae // indirect

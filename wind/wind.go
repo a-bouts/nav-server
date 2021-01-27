@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/nilsmagnus/grib/griblib"
+	"github.com/phtheirichthys/grib/griblib"
 )
 
 type Wind struct {
@@ -65,9 +65,9 @@ func (w Wind) buildGrid(data []float64) [][]float64 {
 	return grid
 }
 
-func Init(date time.Time, file string) (Wind, error) {
+func Init(provider string, date time.Time, file string) (Wind, error) {
 	w := Wind{Date: date, File: file}
-	gribfile, _ := os.Open("grib-data/" + file)
+	gribfile, _ := os.Open("grib-data/" + provider + "/" + file)
 	messages, err := griblib.ReadMessages(gribfile)
 	if err != nil {
 		return w, err
@@ -75,10 +75,10 @@ func Init(date time.Time, file string) (Wind, error) {
 	for _, message := range messages {
 		if message.Section0.Discipline == uint8(0) && message.Section4.ProductDefinitionTemplate.ParameterCategory == uint8(2) && message.Section4.ProductDefinitionTemplate.FirstSurface.Type == 103 && message.Section4.ProductDefinitionTemplate.FirstSurface.Value == 10 {
 			grid0, _ := message.Section3.Definition.(*griblib.Grid0)
-			w.Lat0 = float64(grid0.La1 / 1e6)
-			w.Lon0 = float64(grid0.Lo1 / 1e6)
-			w.ΔLat = float64(grid0.Di / 1e6)
-			w.ΔLon = float64(grid0.Dj / 1e6)
+			w.Lat0 = float64(grid0.La1) / 1e6
+			w.Lon0 = float64(grid0.Lo1) / 1e6
+			w.ΔLat = float64(grid0.Di) / 1e6
+			w.ΔLon = float64(grid0.Dj) / 1e6
 			w.NLat = grid0.Nj
 			w.NLon = grid0.Ni
 			if message.Section4.ProductDefinitionTemplate.ParameterNumber == 2 {

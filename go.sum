@@ -35,6 +35,8 @@ github.com/onsi/gomega v1.7.0/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1Cpa
 github.com/pelletier/go-toml v1.6.0/go.mod h1:5N711Q9dKgbdkxHL+MEfF31hpT7l0S0s/t2kKREewys=
 github.com/peterbourgon/ff v1.7.0 h1:hknvTgsh90jNBIjPq7xeq32Y9AmSbpXvjrFW4sJwW+A=
 github.com/peterbourgon/ff v1.7.0/go.mod h1:/KKxnU5cBj4w21jEMj4Rway/kslRP6XAOHh7CH8AyAM=
+github.com/phtheirichthys/grib v1.2.7 h1:IiLzSAaOSpo/m4WJgjmR+kEYmP09XF4Vo30IUVCfPrc=
+github.com/phtheirichthys/grib v1.2.7/go.mod h1:Mm9BKr+FUDqgp9fBmzUq6VzSHctWRyM8noO4Wg93SW8=
 github.com/pkg/profile v1.5.0 h1:042Buzk+NhDI+DeSAA62RwJL8VAuZUMQZUjCsRz1Mug=
 github.com/pkg/profile v1.5.0/go.mod h1:qBsxPvzyUincmltOk6iyRVxHYg4adc0OFOv72ZdLa18=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

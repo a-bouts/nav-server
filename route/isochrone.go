@@ -134,28 +134,27 @@ var cartesian latlon.LatLonHaversine = latlon.LatLonHaversine{}
 func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64, twa float64, wb float64, ws float64, d float64, factor float64, min *float64, isAlternative bool) (int, *Position) {
 	change := false
 
-	if context.optim {
-		if math.Abs(twa) < 30 || math.Abs(twa) > 160 {
-			return 0, nil
+	if math.Abs(twa) < 30 || math.Abs(twa) > 160 {
+		return 0, nil
+	}
+	if src.fromDist > 0.0 {
+		bMin := src.bearing - 120
+		if bMin < 0 {
+			bMin = bMin + 360
 		}
-		if src.fromDist > 0.0 {
-			bMin := src.bearing - 120
-			if bMin < 0 {
-				bMin = bMin + 360
-			}
-			bMax := src.bearing + 120
-			if bMax >= 360 {
-				bMax = bMax - 360
-			}
-			if bMin < bMax && (b < bMin || b > bMax) || bMin > bMax && (b > bMax && b < bMin) {
-				return 0, nil
-			}
+		bMax := src.bearing + 120
+		if bMax >= 360 {
+			bMax = bMax - 360
+		}
+		if bMin < bMax && (b < bMin || b > bMax) || bMin > bMax && (b > bMax && b < bMin) {
+			return 0, nil
 		}
 	}
 
+	
 	atomic.AddUint64(&context.ops, 1)
 
-	bearing := b //math.Round(b)
+	bearing := b
 
 	isInIceLimits := src.isInIceLimits
 	boatSpeed, sail, isFoil := context.polar.GetBoatSpeed(twa, ws, context.boat, isInIceLimits)
@@ -256,7 +255,7 @@ func doorReached(context *Context, start *Position, src *Position, buoy Buoy, wb
 		res := context.positionProvider.get()
 		res.Latlon = latlon
 		res.fromDist = fullDist
-		res.bearing = math.Round(az12)
+		res.bearing = az12
 		res.twa = twa
 		res.wind = wb
 		res.windSpeed = ws * 1.943844

@@ -50,9 +50,9 @@ func main() {
 	}
 
 	log.Info("Load winds")
-	w := wind.InitWinds()
+	p := wind.InitWinds()
 
-	router := api.InitServer(*cpuprofile, l, w, x)
+	router := api.InitServer(*cpuprofile, l, p, x)
 
 	log.Println("Start server on port 8888")
 	log.Fatal(http.ListenAndServe(":8888", router))
