@@ -57,7 +57,7 @@ func InitServer(cpuprofile bool, l *land.Land, p wind.Providers, x *xmpp.Xmpp) *
 	apiV1.HandleFunc("/route", s.routeV1).Methods("POST")
 	apiV1.HandleFunc("/expes", s.getExpes).Methods("GET")
 	apiV1.HandleFunc("/sneak", s.sneakV1).Methods("POST")
-	apiV1.HandleFunc("/wind/{provider}/{stamp}/{file}/{lat}/{lon}", s.wind).Methods("GET")
+	apiV1.HandleFunc("/wind/{stamp}/{file}/{lat}/{lon}", s.wind).Methods("GET")
 
 	apiV2 := router.PathPrefix("/route/api/v2").Subrouter()
 	apiV2.HandleFunc("/route", s.route).Methods("POST")
