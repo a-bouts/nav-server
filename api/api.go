@@ -166,6 +166,15 @@ func (s *server) route(w http.ResponseWriter, req *http.Request) {
 		72:   3.0,
 		9999: 6.0}
 
+	if r.Race.Name == "RORC Caribbean" {
+		deltas = map[int]float64{
+			6:    1.0 / 12.0,
+			12:   1.0 / 6.0,
+			48:   0.5,
+			72:   1.0,
+			9999: 3.0}
+	}
+
 	isos := route.Run(r, s.l, s.w, s.x, deltas, s.positionPool)
 
 	delta := time.Now().Sub(start)
@@ -240,6 +249,15 @@ func (s *server) routeOld(w http.ResponseWriter, req *http.Request) {
 		48:   1.0,
 		72:   3.0,
 		9999: 6.0}
+
+	if r.Race.Name == "RORC Caribbean" {
+		deltas = map[int]float64{
+			6:    1.0 / 12.0,
+			12:   1.0 / 6.0,
+			48:   0.5,
+			72:   1.0,
+			9999: 3.0}
+	}
 
 	isos := route.Run(r, s.l, s.w, s.x, deltas, s.positionPool)
 
