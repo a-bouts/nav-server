@@ -166,7 +166,7 @@ func (s *server) route(w http.ResponseWriter, req *http.Request) {
 		72:   3.0,
 		9999: 6.0}
 
-	if r.Race.Name == "Nord Stream" {
+	if r.Race.Name == "Maître Coq" {
 		deltas = map[int]float64{
 			6:    1.0 / 12.0,
 			12:   1.0 / 6.0,
@@ -250,7 +250,7 @@ func (s *server) routeOld(w http.ResponseWriter, req *http.Request) {
 		72:   3.0,
 		9999: 6.0}
 
-	if r.Race.Name == "Nord Stream" {
+	if r.Race.Name == "Maître Coq" {
 		deltas = map[int]float64{
 			6:    1.0 / 12.0,
 			12:   1.0 / 6.0,
