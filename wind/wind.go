@@ -171,6 +171,10 @@ func Interpolate(w1 []*Wind, w2 []*Wind, lat float64, lon float64, h float64) (f
 	}
 	d := math.Sqrt(u*u + v*v)
 
-	return vectorToDegrees(u, v, d), d
+	// convert m/s to kts
+	if d < 1.028888888888891 {
+		d = 1.028888888888891
+	}
 
+	return vectorToDegrees(u, v, d), d
 }
