@@ -40,13 +40,27 @@ type Winch struct {
 	Tack       Penalty `json:"tack"`
 	Gybe       Penalty `json:"gybe"`
 	SailChange Penalty `json:"sailChange"`
+	Lws        float64 `json:"lws"`
+	Hws        float64 `json:"hws"`
 }
 
 type Penalty struct {
-	StdTimerSec int     `json:"stdTimerSec"`
-	StdRatio    float64 `json:"stdRatio"`
-	ProTimerSec int     `json:"proTimerSec"`
-	ProRatio    float64 `json:"proRatio"`
+	StdTimerSec int        `json:"stdTimerSec"`
+	StdRatio    float64    `json:"stdRatio"`
+	ProTimerSec int        `json:"proTimerSec"`
+	ProRatio    float64    `json:"proRatio"`
+	Std         *Penalties `json:"std"`
+	Pro         *Penalties `json:"pro"`
+}
+
+type Penalties struct {
+	Lw PenaltyValue `json:"lw"`
+	Hw PenaltyValue `json:"hw"`
+}
+
+type PenaltyValue struct {
+	Ratio float64 `json:"ratio"`
+	Timer int     `json:"timer"`
 }
 
 type Sail struct {
@@ -188,4 +202,68 @@ func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat, isInIceLim
 	//
 
 	return maxBs, maxS, uint8(math.Round((f - 1.0) * 100 / (boat.Foil.SpeedRatio - 1)))
+}
+
+func (boat Boat2) getPenaltyValues(p *Penalty, ws float64, context Boat) (float64, int) {
+
+	h := 0.0
+
+	if ws < boat.Winch.Lws {
+		h = 0.0
+	} else if ws > boat.Winch.Hws {
+		h = 1.0
+	} else {
+		h = (ws - boat.Winch.Lws) / (boat.Winch.Hws - boat.Winch.Lws)
+	}
+
+	lwr := p.ProRatio
+	hwr := p.ProRatio
+	lwt := p.ProTimerSec
+	hwt := p.ProTimerSec
+
+	if context.WinchPro && p.Pro != nil {
+		lwr = p.Pro.Lw.Ratio
+		hwr = p.Pro.Hw.Ratio
+		lwt = p.Pro.Lw.Timer
+		hwt = p.Pro.Hw.Timer
+	} else if !context.WinchPro && p.Std != nil {
+		lwr = p.Std.Lw.Ratio
+		hwr = p.Std.Hw.Ratio
+		lwt = p.Std.Lw.Timer
+		hwt = p.Std.Hw.Timer
+	}
+
+	return h*hwr + (1-h)*lwr, int(h*float64(hwt) + (1-h)*float64(lwt))
+}
+
+func (boat Boat2) GetPenalty(previousTwa float64, newTwa float64, previousSail byte, newSail byte, ws float64, context Boat) (bool, byte, int) {
+
+	penalties := false
+	timeLooseSec := 0
+	var penaltyTypes byte
+
+	if newTwa*previousTwa < 0 && newTwa < 90 {
+		r, t := boat.getPenaltyValues(&boat.Winch.Tack, newTwa, context)
+
+		penalties = true
+		timeLooseSec += int(float64(t) * (1 - r))
+		penaltyTypes |= 1
+
+	} else if newTwa*previousTwa < 0 && newTwa >= 90 {
+		r, t := boat.getPenaltyValues(&boat.Winch.Gybe, newTwa, context)
+
+		penalties = true
+		timeLooseSec += int(float64(t) * (1 - r))
+		penaltyTypes |= 2
+	}
+
+	if previousSail != newSail {
+		r, t := boat.getPenaltyValues(&boat.Winch.SailChange, newTwa, context)
+
+		penalties = true
+		timeLooseSec += int(float64(t) * (1 - r))
+		penaltyTypes |= 4
+	}
+
+	return penalties, penaltyTypes, timeLooseSec
 }

@@ -494,7 +494,7 @@ func Run(route model.Route, l *land.Land, winds *wind.Winds, xm *xmpp.Xmpp, delt
 
 	context := Context{
 		route:         route,
-		boat:          polar.Boat{Foil: route.Options.Foil, Hull: route.Options.Hull, Sails: route.Options.Sail},
+		boat:          polar.Boat{Foil: route.Options.Foil, Hull: route.Options.Hull, Sails: route.Options.Sail, WinchPro: route.Options.Winch},
 		land:          l,
 		winds:         winds,
 		winchMalus:    winchMalus,
