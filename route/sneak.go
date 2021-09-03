@@ -40,15 +40,9 @@ func EvalSneak(route model.Route, winds *wind.Winds, positionPool *sync.Pool) Sn
 		route.Params.MaxDuration = 24
 	}
 
-	winchMalus := 5.0
-	if route.Options.Winch {
-		winchMalus = 1.25
-	}
-
 	context := Context{
-		route:      route,
-		boat:       polar.Boat{Foil: route.Options.Foil, Hull: route.Options.Hull, Sails: route.Options.Sail},
-		winchMalus: winchMalus,
+		route: route,
+		boat:  polar.Boat{Foil: route.Options.Foil, Hull: route.Options.Hull, Sails: route.Options.Sail},
 		positionProvider: positionProviderPool{
 			pool: positionPool,
 		},

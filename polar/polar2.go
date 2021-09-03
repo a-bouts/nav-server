@@ -37,14 +37,14 @@ type Hull struct {
 }
 
 type Winch struct {
-	Tack       Penalty `json:"tack"`
-	Gybe       Penalty `json:"gybe"`
-	SailChange Penalty `json:"sailChange"`
+	Tack       Move    `json:"tack"`
+	Gybe       Move    `json:"gybe"`
+	SailChange Move    `json:"sailChange"`
 	Lws        float64 `json:"lws"`
 	Hws        float64 `json:"hws"`
 }
 
-type Penalty struct {
+type Move struct {
 	StdTimerSec int        `json:"stdTimerSec"`
 	StdRatio    float64    `json:"stdRatio"`
 	ProTimerSec int        `json:"proTimerSec"`
@@ -204,7 +204,7 @@ func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat, isInIceLim
 	return maxBs, maxS, uint8(math.Round((f - 1.0) * 100 / (boat.Foil.SpeedRatio - 1)))
 }
 
-func (boat Boat2) getPenaltyValues(p *Penalty, ws float64, context Boat) (float64, int) {
+func (boat Boat2) getPenaltyValues(p *Move, ws float64, context Boat) (int, float64) {
 
 	h := 0.0
 
@@ -221,6 +221,13 @@ func (boat Boat2) getPenaltyValues(p *Penalty, ws float64, context Boat) (float6
 	lwt := p.ProTimerSec
 	hwt := p.ProTimerSec
 
+	if !context.WinchPro {
+		lwr = p.StdRatio
+		hwr = p.StdRatio
+		lwt = p.StdTimerSec
+		hwt = p.StdTimerSec
+	}
+
 	if context.WinchPro && p.Pro != nil {
 		lwr = p.Pro.Lw.Ratio
 		hwr = p.Pro.Hw.Ratio
@@ -233,37 +240,57 @@ func (boat Boat2) getPenaltyValues(p *Penalty, ws float64, context Boat) (float6
 		hwt = p.Std.Hw.Timer
 	}
 
-	return h*hwr + (1-h)*lwr, int(h*float64(hwt) + (1-h)*float64(lwt))
+	sinH := (1 - math.Sin(math.Pi/2+math.Pi*h)) / 2
+
+	return int(sinH*float64(hwt) + (1-sinH)*float64(lwt)), sinH*hwr + (1-sinH)*lwr
 }
 
-func (boat Boat2) GetPenalty(previousTwa float64, newTwa float64, previousSail byte, newSail byte, ws float64, context Boat) (bool, byte, int) {
+type Penalty struct {
+	DurationSec int
+	Ratio       float64
+}
 
-	penalties := false
-	timeLooseSec := 0
-	var penaltyTypes byte
+func MergePenalties(penalties *[]Penalty, index int, durationSec int, ratio float64) {
+
+	if durationSec == 0 {
+		return
+	}
+
+	if penalties == nil {
+		*penalties = []Penalty{Penalty{DurationSec: durationSec, Ratio: ratio}}
+	} else if len(*penalties) == index {
+		*penalties = append(*penalties, Penalty{DurationSec: durationSec, Ratio: ratio})
+	} else if (*penalties)[index].DurationSec <= durationSec {
+		(*penalties)[index].Ratio *= ratio
+		MergePenalties(penalties, index+1, durationSec-(*penalties)[index].DurationSec, ratio)
+	} else {
+		*penalties = append([]Penalty{Penalty{DurationSec: durationSec, Ratio: ratio * (*penalties)[index].Ratio}}, (*penalties)...)
+		(*penalties)[index+1].DurationSec -= durationSec
+	}
+
+}
+
+func (boat Boat2) AddPenalty(penalties []Penalty, previousTwa float64, newTwa float64, previousSail byte, newSail byte, ws float64, context Boat) []Penalty {
+
+	newPenalties := make([]Penalty, len(penalties))
+	copy(newPenalties, penalties)
 
 	if newTwa*previousTwa < 0 && newTwa < 90 {
-		r, t := boat.getPenaltyValues(&boat.Winch.Tack, newTwa, context)
+		d, r := boat.getPenaltyValues(&boat.Winch.Tack, newTwa, context)
 
-		penalties = true
-		timeLooseSec += int(float64(t) * (1 - r))
-		penaltyTypes |= 1
+		MergePenalties(&newPenalties, 0, d, r)
 
 	} else if newTwa*previousTwa < 0 && newTwa >= 90 {
-		r, t := boat.getPenaltyValues(&boat.Winch.Gybe, newTwa, context)
+		d, r := boat.getPenaltyValues(&boat.Winch.Gybe, newTwa, context)
 
-		penalties = true
-		timeLooseSec += int(float64(t) * (1 - r))
-		penaltyTypes |= 2
+		MergePenalties(&newPenalties, 0, d, r)
 	}
 
 	if previousSail != newSail {
-		r, t := boat.getPenaltyValues(&boat.Winch.SailChange, newTwa, context)
+		d, r := boat.getPenaltyValues(&boat.Winch.SailChange, newTwa, context)
 
-		penalties = true
-		timeLooseSec += int(float64(t) * (1 - r))
-		penaltyTypes |= 4
+		MergePenalties(&newPenalties, 0, d, r)
 	}
 
-	return penalties, penaltyTypes, timeLooseSec
+	return newPenalties
 }

@@ -20,15 +20,9 @@ type BoatLine struct {
 
 func GetBoatLines(route model.Route, winds *wind.Winds, positionPool *sync.Pool) []map[int](*BoatLine) {
 
-	winchMalus := 5.0
-	if route.Options.Winch {
-		winchMalus = 1.25
-	}
-
 	context := Context{
-		route:      route,
-		boat:       polar.Boat{Foil: route.Options.Foil, Hull: route.Options.Hull},
-		winchMalus: winchMalus,
+		route: route,
+		boat:  polar.Boat{Foil: route.Options.Foil, Hull: route.Options.Hull},
 		positionProvider: positionProviderPool{
 			pool: positionPool,
 		},

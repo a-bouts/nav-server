@@ -4,27 +4,30 @@ import (
 	"sync"
 
 	"github.com/a-bouts/nav-server/latlon"
+	"github.com/a-bouts/nav-server/polar"
 )
 
 type Position struct {
-	Latlon           latlon.LatLon
-	fromDist         float64
-	bearing          float64
-	twa              float64
-	wind             float64
-	windSpeed        float64
-	boatSpeed        float64
-	foil             uint8
-	distTo           float64
-	previousWindLine *Position
-	duration         float64
-	navDuration      float64
-	doorReached      uint8
-	isLand           bool
-	sail             byte
-	change           bool
-	reached          bool
-	isInIceLimits    bool
+	Latlon             latlon.LatLon
+	fromDist           float64
+	bearing            float64
+	twa                float64
+	wind               float64
+	windSpeed          float64
+	boatSpeed          float64
+	foil               uint8
+	distTo             float64
+	previousWindLine   *Position
+	duration           float64
+	navDuration        float64
+	penalties          []polar.Penalty
+	remainingPenalties []polar.Penalty
+	doorReached        uint8
+	isLand             bool
+	sail               byte
+	change             bool
+	reached            bool
+	isInIceLimits      bool
 }
 
 type positionProvider interface {
@@ -69,6 +72,7 @@ func (pos *Position) clear() {
 	pos.previousWindLine = nil
 	pos.duration = 0
 	pos.navDuration = 0
+	pos.remainingPenalties = nil
 	pos.isLand = false
 	pos.change = false
 	pos.reached = false

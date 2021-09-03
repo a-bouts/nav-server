@@ -8,7 +8,7 @@ import (
 
 type Polar interface {
 	GetBoatSpeed(twa float64, ws float64, boat Boat, isInIceLimits bool) (float64, byte, uint8)
-	GetPenalty(previousTwa float64, newTwa float64, previousSail byte, newSail byte, ws float64, context Boat) (bool, byte, int)
+	AddPenalty(penalties []Penalty, previousTwa float64, newTwa float64, previousSail byte, newSail byte, ws float64, context Boat) []Penalty
 }
 
 type Zezo struct {
@@ -144,36 +144,27 @@ func foil(twa, ws float64) float64 {
 	return 1.0 + 0.04*ct*cv
 }
 
-func (z Zezo) GetPenalty(previousTwa float64, newTwa float64, previousSail byte, newSail byte, ws float64, context Boat) (bool, byte, int) {
+func (z Zezo) AddPenalty(penalties []Penalty, previousTwa float64, newTwa float64, previousSail byte, newSail byte, ws float64, context Boat) []Penalty {
 
-	t := 0.0
+	t := 0
 	if context.WinchPro {
 		t = 300
 	} else {
 		t = 75
 	}
 
-	penalties := false
-	timeLooseSec := 0
-	var penaltyTypes byte
-
 	if newTwa*previousTwa < 0 && newTwa < 90 {
-		penalties = true
-		timeLooseSec += int(t * (1 - 0.5))
-		penaltyTypes |= 1
+
+		MergePenalties(&penalties, 0, t, 0.5)
 	}
 
 	if newTwa*previousTwa < 0 && newTwa >= 90 {
-		penalties = true
-		timeLooseSec += int(t * (1 - 0.5))
-		penaltyTypes |= 2
+		MergePenalties(&penalties, 0, t, 0.5)
 	}
 
 	if previousSail != newSail {
-		penalties = true
-		timeLooseSec += int(t * (1 - 0.5))
-		penaltyTypes |= 4
+		MergePenalties(&penalties, 0, t, 0.5)
 	}
 
-	return penalties, penaltyTypes, timeLooseSec
+	return penalties
 }

@@ -18,12 +18,11 @@ import (
 )
 
 type Context struct {
-	route      model.Route
-	polar      polar.Polar
-	boat       polar.Boat
-	land       *land.Land
-	winds      *wind.Winds
-	winchMalus float64
+	route model.Route
+	polar polar.Polar
+	boat  polar.Boat
+	land  *land.Land
+	winds *wind.Winds
 	latlon.LatLonSpherical
 	maxDistFactor    float64
 	delta            float64
@@ -65,18 +64,20 @@ type Sumup struct {
 }
 
 type WindLinePosition struct {
-	Lat       float64 `json:"lat"`
-	Lon       float64 `json:"lon"`
-	Twa       float64 `json:"twa"`
-	Bearing   float64 `json:"bearing"`
-	Wind      float64 `json:"wind"`
-	WindSpeed float64 `json:"windSpeed"`
-	BoatSpeed float64 `json:"boatSpeed"`
-	Sail      byte    `json:"sail"`
-	Foil      uint8   `json:"foil"`
-	Ice       bool    `json:"ice"`
-	Duration  float64 `json:"duration"`
-	Change    bool    `json:"change"`
+	Lat                float64         `json:"lat"`
+	Lon                float64         `json:"lon"`
+	Twa                float64         `json:"twa"`
+	Bearing            float64         `json:"bearing"`
+	Wind               float64         `json:"wind"`
+	WindSpeed          float64         `json:"windSpeed"`
+	BoatSpeed          float64         `json:"boatSpeed"`
+	Sail               byte            `json:"sail"`
+	Foil               uint8           `json:"foil"`
+	Ice                bool            `json:"ice"`
+	Duration           float64         `json:"duration"`
+	Change             bool            `json:"change"`
+	Penalties          []polar.Penalty `json:"penalties"`
+	RemainingPenalties []polar.Penalty `json:"remainingPenalties"`
 }
 
 type IsLand struct {
@@ -117,9 +118,54 @@ func isToAvoid(buoy Buoy, p latlon.LatLon) bool {
 
 var cartesian latlon.LatLonHaversine = latlon.LatLonHaversine{}
 
-func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64, twa float64, wb float64, ws float64, d float64, factor float64, min *float64) (int, *Position) {
-	change := false
+func distanceMUsingPenalties(penalties []polar.Penalty, boatSpeedKt float64, durationSec int) (float64, []polar.Penalty, float64) {
+	boatSpeedMs := boatSpeedKt * 0.5144447
 
+	if len(penalties) > 0 && durationSec < penalties[0].DurationSec {
+
+		newPenalties := make([]polar.Penalty, len(penalties))
+		copy(newPenalties, penalties)
+		newPenalties[0].DurationSec -= durationSec
+		return boatSpeedMs * penalties[0].Ratio * float64(durationSec), newPenalties, boatSpeedKt * penalties[0].Ratio
+
+	} else if len(penalties) > 0 && durationSec >= penalties[0].DurationSec {
+
+		distanceM, newPenalties, _ := distanceMUsingPenalties(penalties[1:], boatSpeedKt, durationSec-penalties[0].DurationSec)
+		return boatSpeedMs*penalties[0].Ratio*float64(penalties[0].DurationSec) + distanceM, newPenalties, boatSpeedKt * penalties[0].Ratio
+	}
+
+	return boatSpeedMs * float64(durationSec), nil, boatSpeedKt
+}
+
+func durationSecUsingPenalties(penalties []polar.Penalty, boatSpeedKt float64, distanceM float64) (int, []polar.Penalty) {
+	boatSpeedMs := boatSpeedKt * 0.5144447
+
+	if len(penalties) > 0 {
+
+		if distanceM < boatSpeedMs*penalties[0].Ratio*float64(penalties[0].DurationSec) {
+
+			durationSec := int(distanceM / (boatSpeedMs * penalties[0].Ratio))
+
+			newPenalties := make([]polar.Penalty, len(penalties))
+			copy(newPenalties, penalties)
+			newPenalties[0].DurationSec -= durationSec
+
+			return durationSec, nil
+		}
+
+		if distanceM >= boatSpeedMs*penalties[0].Ratio*float64(penalties[0].DurationSec) {
+
+			durationSec, newPenalties := durationSecUsingPenalties(penalties[1:], boatSpeedKt, distanceM-boatSpeedMs*penalties[0].Ratio*float64(penalties[0].DurationSec))
+
+			return penalties[0].DurationSec + durationSec, newPenalties
+		}
+
+	}
+
+	return int(distanceM / boatSpeedMs), nil
+}
+
+func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64, twa float64, wb float64, ws float64, d float64, factor float64, min *float64) (int, *Position) {
 	if math.Abs(twa) < 30 || math.Abs(twa) > 160 {
 		return 0, nil
 	}
@@ -137,24 +183,16 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 		}
 	}
 
-	if false { //context.experiment {
-		if math.Abs(twa) < 30 || math.Abs(twa) > 170 {
-			return 0, nil
-		}
-	}
-
 	bearing := b
 
 	isInIceLimits := src.isInIceLimits
-	boatSpeed, sail, isFoil := context.polar.GetBoatSpeed(twa, ws, context.boat, isInIceLimits)
+	boatSpeedKt, sail, isFoil := context.polar.GetBoatSpeed(twa, ws, context.boat, isInIceLimits)
 
-	dist := boatSpeed * 1.852 * d * 1000.0
-	if twa*src.twa < 0 || sail != src.sail {
-		// changement de voile = vitesse / 2 pendant 5 minutes : on enlève 2 minutes et demi
-		dist = boatSpeed * 1.852 * (d*60.0 - context.winchMalus/2) / 60 * 1000.0
-		change = true
+	penalties := context.polar.AddPenalty(src.remainingPenalties, src.twa, twa, src.sail, sail, ws, context.boat)
+	change := len(penalties) > 0
 
-	}
+	dist, remainingPenalties, boatSpeedKt := distanceMUsingPenalties(penalties, boatSpeedKt, int(d*3600))
+	//log.Debug(penalties, int(d*3600), dist, boatSpeedKt*0.5144447*(d*3600))
 
 	to := context.Destination(src.Latlon, b, dist)
 	if context.land != nil && context.land.IsLand(to.Lat, to.Lon) {
@@ -175,12 +213,14 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 	res.twa = twa
 	res.wind = wb
 	res.windSpeed = ws * 1.943844
-	res.boatSpeed = boatSpeed
+	res.boatSpeed = boatSpeedKt
 	res.sail = sail
 	res.foil = isFoil
 	res.isInIceLimits = context.route.Race.IceLimits.IsInIceLimits(&to)
 	res.duration = d + src.duration
 	res.navDuration = d
+	res.penalties = penalties
+	res.remainingPenalties = remainingPenalties
 	res.previousWindLine = src
 	res.change = change
 
@@ -198,33 +238,36 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 }
 
 func doorReached(context *Context, start *Position, src *Position, buoy Buoy, wb float64, ws float64, duration float64, factor float64) (bool, float64, *Position, int) {
-	distToWaypoint, az12 := context.DistanceAndBearingTo(src.Latlon, buoy.destination())
+	distMToWaypoint, az12 := context.DistanceAndBearingTo(src.Latlon, buoy.destination())
 
 	if buoy.radius() > 0 {
-		distToWaypoint -= float64(buoy.radius() * 1852)
+		distMToWaypoint -= float64(buoy.radius() * 1852)
 	}
 
 	twa := wind.Twa(az12, wb)
 
 	isInIceLimits := src.isInIceLimits
-	boatSpeed, sail, isFoil := context.polar.GetBoatSpeed(twa, ws, context.boat, isInIceLimits)
-	durationToWaypoint := (distToWaypoint / 1000.0) / (boatSpeed * 1.852)
+	boatSpeedKt, sail, isFoil := context.polar.GetBoatSpeed(twa, ws, context.boat, isInIceLimits)
 
-	change := false
-	if twa*src.twa < 0 || sail != src.sail {
-		change = true
-		//dist := (boatSpeed / 2.0) * 1.852 * 5.0 / 60.0 * 1000.0
-		dist := (boatSpeed / 2.0) * 1.852 * context.winchMalus / 60.0 * 1000.0
-		if change {
-			if dist > distToWaypoint {
-				durationToWaypoint = (distToWaypoint / 1000.0) / ((boatSpeed / 2.0) * 1.852)
-			} else {
-				durationToWaypoint = context.winchMalus/60.0 + ((distToWaypoint-dist)/1000.0)/(boatSpeed*1.852)
-			}
-		}
-	}
+	penalties := context.polar.AddPenalty(src.remainingPenalties, src.twa, twa, src.sail, sail, ws, context.boat)
+	change := len(penalties) > 0
 
-	if durationToWaypoint <= 1.5*duration {
+	durationSecToWaypoint, remainingPenalties := durationSecUsingPenalties(penalties, boatSpeedKt, distMToWaypoint)
+
+	// if penalty {
+	// 	change = true
+	// 	//dist := (boatSpeed / 2.0) * 1.852 * 5.0 / 60.0 * 1000.0
+	// 	dist := (boatSpeed / 2.0) * 1.852 * context.winchMalus / 60.0 * 1000.0
+	// 	if change {
+	// 		if dist > distToWaypoint {
+	// 			durationToWaypoint = (distToWaypoint / 1000.0) / ((boatSpeed / 2.0) * 1.852)
+	// 		} else {
+	// 			durationToWaypoint = context.winchMalus/60.0 + ((distToWaypoint-dist)/1000.0)/(boatSpeed*1.852)
+	// 		}
+	// 	}
+	// }
+
+	if float64(durationSecToWaypoint)/3600 <= 1.5*duration {
 		latlon := buoy.destination()
 
 		fullDist, az := 0.0, 0.0
@@ -240,17 +283,19 @@ func doorReached(context *Context, start *Position, src *Position, buoy Buoy, wb
 		res.twa = twa
 		res.wind = wb
 		res.windSpeed = ws * 1.943844
-		res.boatSpeed = boatSpeed
+		res.boatSpeed = boatSpeedKt
 		res.sail = sail
 		res.foil = isFoil
 		res.isInIceLimits = context.route.Race.IceLimits.IsInIceLimits(&latlon)
 		res.distTo = 0
-		res.duration = durationToWaypoint + src.duration
-		res.navDuration = durationToWaypoint
+		res.duration = float64(durationSecToWaypoint)/3600 + src.duration
+		res.navDuration = float64(durationSecToWaypoint) / 3600
+		res.penalties = penalties
+		res.remainingPenalties = remainingPenalties
 		res.previousWindLine = src
 		res.change = change
 
-		return true, durationToWaypoint, res, int(math.Round(az * factor))
+		return true, float64(durationSecToWaypoint) / 3600, res, int(math.Round(az * factor))
 	}
 	return false, 0, nil, 0
 }
@@ -487,17 +532,11 @@ func findWinds(winds map[string][]*wind.Wind, m time.Time) ([]*wind.Wind, []*win
 
 func Run(route model.Route, l *land.Land, winds *wind.Winds, xm *xmpp.Xmpp, deltas map[int]float64, positionPool *sync.Pool) Navs {
 
-	winchMalus := 5.0
-	if route.Options.Winch {
-		winchMalus = 1.25
-	}
-
 	context := Context{
 		route:         route,
 		boat:          polar.Boat{Foil: route.Options.Foil, Hull: route.Options.Hull, Sails: route.Options.Sail, WinchPro: route.Options.Winch},
 		land:          l,
 		winds:         winds,
-		winchMalus:    winchMalus,
 		maxDistFactor: 1.5,
 		delta:         route.Params.Delta,
 		positionProvider: positionProviderPool{
@@ -763,18 +802,20 @@ func Run(route model.Route, l *land.Land, winds *wind.Winds, xm *xmpp.Xmpp, delt
 			foils += last.navDuration
 		}
 		result.WindLine = append(result.WindLine, WindLinePosition{
-			Lat:       last.Latlon.Lat,
-			Lon:       last.Latlon.Lon,
-			Twa:       next.twa,
-			Bearing:   next.bearing,
-			Wind:      next.wind,
-			WindSpeed: next.windSpeed,
-			BoatSpeed: next.boatSpeed,
-			Sail:      next.sail,
-			Foil:      next.foil,
-			Ice:       next.isInIceLimits,
-			Duration:  last.duration,
-			Change:    next.change})
+			Lat:                last.Latlon.Lat,
+			Lon:                last.Latlon.Lon,
+			Twa:                next.twa,
+			Bearing:            next.bearing,
+			Wind:               next.wind,
+			WindSpeed:          next.windSpeed,
+			BoatSpeed:          next.boatSpeed,
+			Sail:               next.sail,
+			Foil:               next.foil,
+			Ice:                next.isInIceLimits,
+			Duration:           last.duration,
+			Change:             next.change,
+			Penalties:          next.penalties,
+			RemainingPenalties: next.remainingPenalties})
 		next = last
 	}
 
