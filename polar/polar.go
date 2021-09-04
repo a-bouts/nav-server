@@ -155,15 +155,15 @@ func (z Zezo) AddPenalty(penalties []Penalty, previousTwa float64, newTwa float6
 
 	if newTwa*previousTwa < 0 && newTwa < 90 {
 
-		MergePenalties(&penalties, 0, t, 0.5)
+		MergePenalties(&penalties, 0, t, 0.5, 1)
 	}
 
 	if newTwa*previousTwa < 0 && newTwa >= 90 {
-		MergePenalties(&penalties, 0, t, 0.5)
+		MergePenalties(&penalties, 0, t, 0.5, 2)
 	}
 
 	if previousSail != newSail {
-		MergePenalties(&penalties, 0, t, 0.5)
+		MergePenalties(&penalties, 0, t, 0.5, 4)
 	}
 
 	return penalties

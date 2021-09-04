@@ -204,16 +204,16 @@ func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat, isInIceLim
 	return maxBs, maxS, uint8(math.Round((f - 1.0) * 100 / (boat.Foil.SpeedRatio - 1)))
 }
 
-func (boat Boat2) getPenaltyValues(p *Move, ws float64, context Boat) (int, float64) {
+func (boat Boat2) getPenaltyValues(p *Move, wsKt float64, context Boat) (int, float64) {
 
 	h := 0.0
 
-	if ws < boat.Winch.Lws {
+	if wsKt < boat.Winch.Lws {
 		h = 0.0
-	} else if ws > boat.Winch.Hws {
+	} else if wsKt > boat.Winch.Hws {
 		h = 1.0
 	} else {
-		h = (ws - boat.Winch.Lws) / (boat.Winch.Hws - boat.Winch.Lws)
+		h = (wsKt - boat.Winch.Lws) / (boat.Winch.Hws - boat.Winch.Lws)
 	}
 
 	lwr := p.ProRatio
@@ -248,48 +248,57 @@ func (boat Boat2) getPenaltyValues(p *Move, ws float64, context Boat) (int, floa
 type Penalty struct {
 	DurationSec int
 	Ratio       float64
+	Type        byte
 }
 
-func MergePenalties(penalties *[]Penalty, index int, durationSec int, ratio float64) {
+func MergePenalties(penalties *[]Penalty, index int, durationSec int, ratio float64, penaltyType byte) {
 
 	if durationSec == 0 {
 		return
 	}
 
 	if penalties == nil {
-		*penalties = []Penalty{Penalty{DurationSec: durationSec, Ratio: ratio}}
+		*penalties = []Penalty{Penalty{DurationSec: durationSec, Ratio: ratio, Type: penaltyType}}
 	} else if len(*penalties) == index {
-		*penalties = append(*penalties, Penalty{DurationSec: durationSec, Ratio: ratio})
+		*penalties = append(*penalties, Penalty{DurationSec: durationSec, Ratio: ratio, Type: penaltyType})
 	} else if (*penalties)[index].DurationSec <= durationSec {
 		(*penalties)[index].Ratio *= ratio
-		MergePenalties(penalties, index+1, durationSec-(*penalties)[index].DurationSec, ratio)
+		(*penalties)[index].Type |= penaltyType
+		MergePenalties(penalties, index+1, durationSec-(*penalties)[index].DurationSec, ratio, penaltyType)
 	} else {
-		*penalties = append([]Penalty{Penalty{DurationSec: durationSec, Ratio: ratio * (*penalties)[index].Ratio}}, (*penalties)...)
+		*penalties = append([]Penalty{Penalty{DurationSec: durationSec, Ratio: ratio * (*penalties)[index].Ratio, Type: penaltyType | (*penalties)[index].Type}}, (*penalties)...)
 		(*penalties)[index+1].DurationSec -= durationSec
 	}
 
 }
 
-func (boat Boat2) AddPenalty(penalties []Penalty, previousTwa float64, newTwa float64, previousSail byte, newSail byte, ws float64, context Boat) []Penalty {
+func (boat Boat2) AddPenalty(penalties []Penalty, previousTwa float64, newTwa float64, previousSail byte, newSail byte, wsMs float64, context Boat) []Penalty {
+
+	wsKt := wsMs * 1.9438444924406
+
+	//fmt.Printf("AddPenalty (%f -> %f) (%d -> %d)\n", previousTwa, newTwa, previousSail, newSail)
 
 	newPenalties := make([]Penalty, len(penalties))
 	copy(newPenalties, penalties)
 
-	if newTwa*previousTwa < 0 && newTwa < 90 {
-		d, r := boat.getPenaltyValues(&boat.Winch.Tack, newTwa, context)
+	if newTwa*previousTwa < 0 && math.Abs(newTwa) < 90 {
+		d, r := boat.getPenaltyValues(&boat.Winch.Tack, wsKt, context)
+		//fmt.Printf("Tack %d %f\n", d, r)
 
-		MergePenalties(&newPenalties, 0, d, r)
+		MergePenalties(&newPenalties, 0, d, r, 1)
 
-	} else if newTwa*previousTwa < 0 && newTwa >= 90 {
-		d, r := boat.getPenaltyValues(&boat.Winch.Gybe, newTwa, context)
+	} else if newTwa*previousTwa < 0 && math.Abs(newTwa) >= 90 {
+		d, r := boat.getPenaltyValues(&boat.Winch.Gybe, wsKt, context)
+		//fmt.Printf("Gybe %d %f\n", d, r)
 
-		MergePenalties(&newPenalties, 0, d, r)
+		MergePenalties(&newPenalties, 0, d, r, 2)
 	}
 
 	if previousSail != newSail {
-		d, r := boat.getPenaltyValues(&boat.Winch.SailChange, newTwa, context)
+		d, r := boat.getPenaltyValues(&boat.Winch.SailChange, wsKt, context)
+		//fmt.Printf("Sail %d %f\n", d, r)
 
-		MergePenalties(&newPenalties, 0, d, r)
+		MergePenalties(&newPenalties, 0, d, r, 4)
 	}
 
 	return newPenalties
