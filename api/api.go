@@ -160,7 +160,7 @@ func (s *server) route(w http.ResponseWriter, req *http.Request) {
 	start := time.Now()
 
 	deltas := map[int]float64{
-		6:    1.0 / 6.0,
+		12:    1.0 / 6.0,
 		48:   0.5,
 		72:   1.0,
 		144:  3.0,
