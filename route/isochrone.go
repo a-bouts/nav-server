@@ -188,6 +188,10 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 	isInIceLimits := src.isInIceLimits
 	boatSpeedKt, sail, isFoil := context.polar.GetBoatSpeed(twa, ws, context.boat, isInIceLimits)
 
+	if boatSpeedKt == 0 {
+		return 0, nil
+	}
+
 	penalties := context.polar.AddPenalty(src.remainingPenalties, src.twa, twa, src.sail, sail, ws, context.boat)
 	change := len(penalties) > 0
 
@@ -248,6 +252,10 @@ func doorReached(context *Context, start *Position, src *Position, buoy Buoy, wb
 
 	isInIceLimits := src.isInIceLimits
 	boatSpeedKt, sail, isFoil := context.polar.GetBoatSpeed(twa, ws, context.boat, isInIceLimits)
+
+	if boatSpeedKt == 0 {
+		return false, 0, nil, 0
+	}
 
 	penalties := context.polar.AddPenalty(src.remainingPenalties, src.twa, twa, src.sail, sail, ws, context.boat)
 	change := len(penalties) > 0
