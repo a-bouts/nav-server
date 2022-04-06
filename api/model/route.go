@@ -18,10 +18,11 @@ type Route struct {
 }
 
 type Options struct {
-	Sail  byte `json:"sail"`
-	Foil  bool `json:"foil"`
-	Hull  bool `json:"hull"`
-	Winch bool `json:"winch"`
+	Sail     byte `json:"sail"`
+	Foil     bool `json:"foil"`
+	Hull     bool `json:"hull"`
+	Winch    bool `json:"winch"`
+	AutoSail bool `json:"autoSail"`
 }
 
 type Params struct {
