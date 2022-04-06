@@ -145,7 +145,7 @@ func foil2(boat Boat2, twa float64, ws float64) float64 {
 	return 1.0 + (boat.Foil.SpeedRatio-1)*ct*cv
 }
 
-func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat, isInIceLimits bool) (float64, byte, uint8) {
+func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat, currentSail byte, isInIceLimits bool) (float64, byte, uint8, uint8) {
 	// convert m/s to kts
 	ws = ws * 1.9438444924406
 
@@ -163,6 +163,7 @@ func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat, isInIceLim
 	unMoinsTwaFactor1 := 1 - twaFactor
 
 	var maxBs float64
+	var currentBs float64
 	var maxS byte
 
 	l := len(boat.Sail)
@@ -177,9 +178,22 @@ func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat, isInIceLim
 		ti1 := sail.Speed[twaIndex1]
 		bs := (ti0[twsIndex0]*twsFactor+ti0[twsIndex1]*(unMoinsTwsFactor1))*twaFactor + (ti1[twsIndex0]*twsFactor+ti1[twsIndex1]*(unMoinsTwsFactor1))*(unMoinsTwaFactor1)
 
+		if byte(s) == currentSail {
+			currentBs = bs
+		}
 		if bs > maxBs {
 			maxBs = bs
 			maxS = byte(s)
+		}
+	}
+
+	boost := 1.0
+	if context.AutoSail {
+		boost = maxBs / currentBs
+		if boost <= boat.AutoSailChangeTolerance {
+			maxS = currentSail
+		} else {
+			boost = 1.0
 		}
 	}
 
@@ -201,7 +215,7 @@ func (boat Boat2) GetBoatSpeed(twa float64, ws float64, context Boat, isInIceLim
 	// }
 	//
 
-	return maxBs, maxS, uint8(math.Round((f - 1.0) * 100 / (boat.Foil.SpeedRatio - 1)))
+	return maxBs, maxS, uint8(math.Round((f - 1.0) * 100 / (boat.Foil.SpeedRatio - 1))), uint8(math.Round((boost - 1.0) * 100 / (boat.AutoSailChangeTolerance - 1.0)))
 }
 
 func (boat Boat2) getPenaltyValues(p *Move, wsKt float64, context Boat) (int, float64) {

@@ -73,6 +73,7 @@ type WindLinePosition struct {
 	BoatSpeed          float64         `json:"boatSpeed"`
 	Sail               byte            `json:"sail"`
 	Foil               uint8           `json:"foil"`
+	Boost              uint8           `json:"boost"`
 	Ice                bool            `json:"ice"`
 	Duration           float64         `json:"duration"`
 	Change             bool            `json:"change"`
@@ -186,7 +187,7 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 	bearing := b
 
 	isInIceLimits := src.isInIceLimits
-	boatSpeedKt, sail, isFoil := context.polar.GetBoatSpeed(twa, ws, context.boat, isInIceLimits)
+	boatSpeedKt, sail, isFoil, isBoost := context.polar.GetBoatSpeed(twa, ws, context.boat, src.sail, isInIceLimits)
 
 	if boatSpeedKt == 0 {
 		return 0, nil
@@ -220,6 +221,7 @@ func jump(context *Context, start *Position, buoy Buoy, src *Position, b float64
 	res.boatSpeed = boatSpeedKt
 	res.sail = sail
 	res.foil = isFoil
+	res.boost = isBoost
 	res.isInIceLimits = context.route.Race.IceLimits.IsInIceLimits(&to)
 	res.duration = d + src.duration
 	res.navDuration = d
@@ -251,7 +253,7 @@ func doorReached(context *Context, start *Position, src *Position, buoy Buoy, wb
 	twa := wind.Twa(az12, wb)
 
 	isInIceLimits := src.isInIceLimits
-	boatSpeedKt, sail, isFoil := context.polar.GetBoatSpeed(twa, ws, context.boat, isInIceLimits)
+	boatSpeedKt, sail, isFoil, isBoost := context.polar.GetBoatSpeed(twa, ws, context.boat, src.sail, isInIceLimits)
 
 	if boatSpeedKt == 0 {
 		return false, 0, nil, 0
@@ -294,6 +296,7 @@ func doorReached(context *Context, start *Position, src *Position, buoy Buoy, wb
 		res.boatSpeed = boatSpeedKt
 		res.sail = sail
 		res.foil = isFoil
+		res.boost = isBoost
 		res.isInIceLimits = context.route.Race.IceLimits.IsInIceLimits(&latlon)
 		res.distTo = 0
 		res.duration = float64(durationSecToWaypoint)/3600 + src.duration
@@ -819,6 +822,7 @@ func Run(route model.Route, l *land.Land, winds *wind.Winds, xm *xmpp.Xmpp, delt
 			BoatSpeed:          next.boatSpeed,
 			Sail:               next.sail,
 			Foil:               next.foil,
+			Boost:              next.boost,
 			Ice:                next.isInIceLimits,
 			Duration:           last.duration,
 			Change:             next.change,

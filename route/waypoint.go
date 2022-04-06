@@ -89,7 +89,7 @@ func GetBuyos(context Context) []Buoy {
 			from = buoys[i-1].departure()
 		}
 		dist := context.DistanceTo(from, b.destination())
-		boatSpeed, _, _ := context.polar.GetBoatSpeed(90, 10.0, context.boat, false)
+		boatSpeed, _, _, _ := context.polar.GetBoatSpeed(90, 10.0, context.boat, byte(0), false)
 		distBetweenPoints := boatSpeed * 1.852 * context.delta * 1000.0
 		//factor := 1.0 + math.Round((math.Pi/180.0)/math.Asin(distBetweenPoints/dist))
 		factor := float64(context.route.Params.Accuracy) + math.Round((math.Pi/180.0)/math.Asin(distBetweenPoints/dist))

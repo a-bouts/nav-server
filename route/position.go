@@ -16,6 +16,7 @@ type Position struct {
 	windSpeed          float64
 	boatSpeed          float64
 	foil               uint8
+	boost              uint8
 	distTo             float64
 	previousWindLine   *Position
 	duration           float64
@@ -68,6 +69,7 @@ func (pos *Position) clear() {
 	pos.boatSpeed = 0
 	pos.sail = 0
 	pos.foil = 0
+	pos.boost = 0
 	pos.distTo = 0
 	pos.previousWindLine = nil
 	pos.duration = 0
