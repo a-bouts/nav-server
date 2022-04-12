@@ -32,4 +32,5 @@ type Params struct {
 	Accuracy    int             `json:"accuracy"`
 	MaxDuration float64         `json:"maxDuration"`
 	Delay       int             `json:"delay"`
+	Deltas      map[int]float64 `json:"deltas"`
 }

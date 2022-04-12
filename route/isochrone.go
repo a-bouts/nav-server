@@ -77,8 +77,8 @@ type WindLinePosition struct {
 	Ice                bool            `json:"ice"`
 	Duration           float64         `json:"duration"`
 	Change             bool            `json:"change"`
-	Penalties          []polar.Penalty `json:"penalties"`
-	RemainingPenalties []polar.Penalty `json:"remainingPenalties"`
+	Penalties          []polar.Penalty `json:"penalties,omitempty"`
+	RemainingPenalties []polar.Penalty `json:"remainingPenalties,omitempty"`
 }
 
 type IsLand struct {
@@ -332,6 +332,19 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 			}
 		}
 	}
+
+	/*for twa := -180.0; twa < 180; twa += 1.0 {
+		b := wind.Heading(twa, wb)
+		az, to := jump(context, start, buoy, src, b, twa, wb, ws, duration, factor, min)
+		if to != nil {
+			prev, exists := result[az]
+			if !exists || prev.fromDist < to.fromDist {
+				result[az] = to
+			} else {
+				context.positionProvider.put(to)
+			}
+		}
+	}*/
 
 	if buoy.buoyType() == "DOOR" {
 		t := context.BearingTo(buoy.(*Door).Left, buoy.(*Door).Right)

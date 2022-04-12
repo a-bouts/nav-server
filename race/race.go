@@ -19,8 +19,8 @@ type RaceWaypoint struct {
 type IceLimits struct {
 	North  []latlon.LatLon `json:"north"`
 	South  []latlon.LatLon `json:"south"`
-	MaxLat int             `json:"maxLat"`
-	MinLat int             `json:"minLat"`
+	MaxLat float64         `json:"maxLat"`
+	MinLat float64         `json:"minLat"`
 }
 
 type Race struct {

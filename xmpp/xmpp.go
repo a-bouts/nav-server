@@ -37,7 +37,7 @@ func (x Xmpp) Send(message string) error {
 		x.Config.Host = serverName(x.Config.Jid)
 	}
 
-	xmpp.DefaultConfig = tls.Config{
+	xmpp.DefaultConfig = &tls.Config{
 		InsecureSkipVerify: true,
 	}
 
