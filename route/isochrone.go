@@ -711,7 +711,7 @@ func Run(route model.Route, l *land.Land, winds *wind.Winds, xm *xmpp.Xmpp, delt
 			previousK := -99
 			for _, k := range keys {
 				if k-previousK > 6 {
-					if previousK > 0 {
+					if previousK > 0 && navSlice != nil {
 						result.Navs[currentNav].Isochrones[currentIso].Paths = append(result.Navs[currentNav].Isochrones[currentIso].Paths, navSlice)
 					}
 					navSlice = make([]IsochronePosition, 0, len(nav))
@@ -720,7 +720,9 @@ func Run(route model.Route, l *land.Land, winds *wind.Winds, xm *xmpp.Xmpp, delt
 				navSlice = append(navSlice, nav[k].forIsochrone())
 				previousK = k
 			}
-			result.Navs[currentNav].Isochrones[currentIso].Paths = append(result.Navs[currentNav].Isochrones[currentIso].Paths, navSlice)
+			if navSlice != nil {
+				result.Navs[currentNav].Isochrones[currentIso].Paths = append(result.Navs[currentNav].Isochrones[currentIso].Paths, navSlice)
+			}
 		}
 
 		if !reached && len(nav) == 0 && len(previousDoorIsochrones) == 0 {
