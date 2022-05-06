@@ -607,13 +607,23 @@ func Run(route model.Route, l *land.Land, winds *wind.Winds, xm *xmpp.Xmpp, delt
 
 	pos := context.positionProvider.get()
 	pos.Latlon = context.route.Start
-	pos.bearing = float64(context.route.Bearing)
 	pos.sail = context.route.CurrentSail
 	pos.distTo = dist
 
 	wb, _ := wind.Interpolate(w, w1, pos.Latlon.Lat, pos.Latlon.Lon, x)
-	pos.twa = wind.Twa(float64(context.route.Bearing), wb)
-	az := int(float64(context.route.Bearing) * buoy.getFactor())
+
+	if context.route.Bearing == nil && context.route.Twa != nil {
+		pos.twa = float64(*context.route.Twa)
+		pos.bearing = wind.Heading(pos.twa, wb)
+	} else if context.route.Bearing != nil && context.route.Twa == nil {
+		pos.bearing = float64(*context.route.Bearing)
+		pos.twa = wind.Twa(pos.bearing, wb)
+	} else {
+		pos.twa = 120.0
+		pos.bearing = wind.Heading(pos.twa, wb)
+	}
+
+	az := int(pos.bearing * buoy.getFactor())
 	nav[az] = pos
 
 	max := make(map[int]float64, int(float64(360)*buoy.getFactor()))

@@ -11,7 +11,8 @@ type Route struct {
 	Params      Params        `json:"params"`
 	StartTime   time.Time     `json:"startTime"`
 	Start       latlon.LatLon `json:"start"`
-	Bearing     int           `json:"bearing"`
+	Bearing     *int          `json:"bearing"`
+	Twa         *int          `json:"twa"`
 	CurrentSail byte          `json:"currentSail"`
 	Race        race.Race     `json:"race"`
 	Options     Options       `json:"options"`

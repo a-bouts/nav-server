@@ -232,7 +232,8 @@ func (s *server) routeOld(w http.ResponseWriter, req *http.Request) {
 		},
 		StartTime:   gonav.StartTime,
 		Start:       gonav.Start,
-		Bearing:     gonav.Bearing,
+		Bearing:     &gonav.Bearing,
+		Twa:         nil,
 		CurrentSail: gonav.CurrentSail,
 		Race:        gonav.Race,
 		Options: model.Options{
@@ -285,7 +286,8 @@ func (s *server) sneakOld(w http.ResponseWriter, req *http.Request) {
 		},
 		StartTime:   gonav.StartTime,
 		Start:       gonav.Start,
-		Bearing:     gonav.Bearing,
+		Bearing:     &gonav.Bearing,
+		Twa:         nil,
 		CurrentSail: gonav.CurrentSail,
 		Race:        gonav.Race,
 		Options: model.Options{
