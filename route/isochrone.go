@@ -333,7 +333,7 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 		}
 	}
 
-	/*for twa := -180.0; twa < 180; twa += 1.0 {
+	for twa := -180.0; twa < 180; twa += 1.0 {
 		b := wind.Heading(twa, wb)
 		az, to := jump(context, start, buoy, src, b, twa, wb, ws, duration, factor, min)
 		if to != nil {
@@ -344,7 +344,7 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 				context.positionProvider.put(to)
 			}
 		}
-	}*/
+	}
 
 	if buoy.buoyType() == "DOOR" {
 		t := context.BearingTo(buoy.(*Door).Left, buoy.(*Door).Right)
