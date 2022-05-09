@@ -320,19 +320,6 @@ func way(context *Context, start *Position, src *Position, wb float64, ws float6
 		return result, true, dur
 	}
 
-	for b := 0.0; b < 360; b += 1.0 {
-		twa := wind.Twa(b, wb)
-		az, to := jump(context, start, buoy, src, b, twa, wb, ws, duration, factor, min)
-		if to != nil {
-			prev, exists := result[az]
-			if !exists || prev.fromDist < to.fromDist {
-				result[az] = to
-			} else {
-				context.positionProvider.put(to)
-			}
-		}
-	}
-
 	for twa := -180.0; twa < 180; twa += 1.0 {
 		b := wind.Heading(twa, wb)
 		az, to := jump(context, start, buoy, src, b, twa, wb, ws, duration, factor, min)
