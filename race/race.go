@@ -83,6 +83,10 @@ func (iceLimits *IceLimits) IsInIceLimits(latLon *latlon.LatLon) bool {
 	}
 
 	if latLon.Lat > 0.0 {
+		if len(iceLimits.North) == 0 {
+			return false
+		}
+
 		i := int((lon + 180) / 5)
 		lat := (lon-iceLimits.North[i].Lon)/(iceLimits.North[i+1].Lon-iceLimits.North[i].Lon)*(iceLimits.North[i+1].Lat-iceLimits.North[i].Lat) + iceLimits.North[i].Lat
 		if latLon.Lat >= lat {
@@ -90,6 +94,10 @@ func (iceLimits *IceLimits) IsInIceLimits(latLon *latlon.LatLon) bool {
 		}
 		return false
 	} else {
+		if len(iceLimits.South) == 0 {
+			return false
+		}
+
 		i := int((lon + 180) / 5)
 		lat := (lon-iceLimits.South[i].Lon)/(iceLimits.South[i+1].Lon-iceLimits.South[i].Lon)*(iceLimits.South[i+1].Lat-iceLimits.South[i].Lat) + iceLimits.South[i].Lat
 		if latLon.Lat <= lat {
